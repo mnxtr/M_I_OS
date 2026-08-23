@@ -36,13 +36,36 @@ M_I_OS/
 └── docs/adr/                       # Architecture decision records
 ```
 
-## Quick start (dev stack)
+## Quick start (dev)
 
+**1. Infra** (Postgres+pgvector, Redis, MinIO):
 ```bash
-docker compose -f infra/docker-compose.yml up -d   # Postgres+pgvector, Redis, MinIO
+docker compose -f infra/docker-compose.yml up -d
 ```
 
-Application code lands in Phase 1 of the roadmap (`docs/04-DEVELOPMENT-PLAN.md`).
+**2. API** (FastAPI, port 8000):
+```bash
+cd apps/api
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+cp .env.example .env
+.venv/bin/uvicorn app.main:app --reload
+```
+Schema bootstrap (tables, pgvector column, RLS policies) runs automatically on startup.
+
+**3. Web** (Next.js, port 3000):
+```bash
+cd apps/web
+npm install && npm run dev
+```
+
+Open http://localhost:3000 → register a factory → upload PDF/TXT → chat with citations.
+
+Without LLM keys the API runs in **offline mode**: deterministic local embeddings + extractive answers. Set `EMBEDDING_PROVIDER=openai` / `LLM_PROVIDER=anthropic|openai` in `apps/api/.env` for full quality.
+
+Tests & lint:
+```bash
+cd apps/api && .venv/bin/python -m pytest tests/test_units.py && .venv/bin/ruff check app tests
+```
 
 ## The one-page pitch
 

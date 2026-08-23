@@ -27,3 +27,9 @@ build/
 # Local data
 infra/data/
 *.sqlite3
+
+# Python venv
+apps/api/.venv/
+
+# Uploads storage
+apps/api/storage/
