@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy import text as sql_text
 
 from app.config import get_settings
+from app.db import set_tenant
 from app.deps import CurrentUser, DbDep
 from app.models import Chunk, Document
 from app.schemas import DocumentOut
@@ -14,6 +15,7 @@ from app.services import tabular
 from app.services.embeddings import embed_texts
 from app.services.ocr import OcrUnavailableError
 from app.services.parsers import detect_parser, is_tabular_file
+from app.services.plans import METRIC_PAGES, record_usage
 
 router = APIRouter(prefix="/v1/documents", tags=["documents"])
 
@@ -122,7 +124,7 @@ def _store_tables(db, document: Document) -> int:
 
 
 def process_document(document_id: uuid.UUID) -> None:
-    from app.db import SessionLocal, set_tenant
+    from app.db import SessionLocal
 
     db = SessionLocal()
     try:
@@ -137,6 +139,7 @@ def process_document(document_id: uuid.UUID) -> None:
                 document.page_count = 0
                 document.status = "ready" if stored_rows > 0 else "failed"
                 document.error = "" if stored_rows > 0 else "No data rows found in spreadsheet"
+                record_usage(db, document.tenant_id, METRIC_PAGES, quantity=stored_rows)
                 return
 
             parser = detect_parser(path.suffix.lower())
@@ -148,6 +151,7 @@ def process_document(document_id: uuid.UUID) -> None:
             document.status = "ready" if page_count > 0 else "failed"
             if page_count == 0:
                 document.error = "No extractable text found"
+            record_usage(db, document.tenant_id, METRIC_PAGES, quantity=page_count)
         except OcrUnavailableError as exc:
             document.status = "failed"
             document.error = str(exc)[:2000]

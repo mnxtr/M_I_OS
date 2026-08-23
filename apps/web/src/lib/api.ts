@@ -333,3 +333,31 @@ export async function downloadBinder(assessmentId: string): Promise<void> {
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+export interface UsageInfo {
+  plan: { code: string; name: string; price_usd: number };
+  period: string;
+  usage: Record<string, number>;
+  limits: Record<string, number>;
+  estimated_minutes_saved: number;
+}
+
+export async function fetchUsage(): Promise<UsageInfo> {
+  const res = await fetch(`${API_URL}/v1/tenant/usage`, { headers: authHeaders() });
+  return handle<UsageInfo>(res);
+}
+
+export interface PlanInfo {
+  code: string;
+  name: string;
+  price_usd: number;
+}
+
+export async function switchPlan(planCode: string): Promise<PlanInfo> {
+  const res = await fetch(`${API_URL}/v1/tenant/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ plan: planCode }),
+  });
+  return handle<PlanInfo>(res);
+}

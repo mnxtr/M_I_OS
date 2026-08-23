@@ -38,6 +38,7 @@ class Tenant(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(200))
+    plan: Mapped[str] = mapped_column(String(30), default="trial", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -186,6 +187,22 @@ class GuestToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class MonthlyUsage(Base):
+    __tablename__ = "monthly_usage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    period: Mapped[str] = mapped_column(String(7))  # YYYY-MM
+    metric: Mapped[str] = mapped_column(
+        String(40)
+    )  # chat_queries | analytics_queries | pages_ingested
+    used: Mapped[int] = mapped_column(Integer, default=0)
+
+    __table_args__ = (
+        Index("ix_monthly_usage_tenant_metric", "tenant_id", "period", "metric", unique=True),
+    )
+
+
 RLS_TABLES = [
     "documents",
     "chunks",
@@ -194,6 +211,7 @@ RLS_TABLES = [
     "assessments",
     "assessment_items",
     "guest_tokens",
+    "monthly_usage",
 ]
 
 

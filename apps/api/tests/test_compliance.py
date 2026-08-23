@@ -62,7 +62,7 @@ def test_parse_verdict_clean_json():
 
 def test_parse_verdict_with_prose_and_code_fence():
     raw = (
-        'Sure! Here is my assessment:\n```json\n'
+        "Sure! Here is my assessment:\n```json\n"
         '{"status": "compliant", "notes": "Policy present.", "quote": "policy signed 2024"}\n```'
     )
     verdict = parse_verdict(raw)

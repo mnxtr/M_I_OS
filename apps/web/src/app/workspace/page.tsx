@@ -8,11 +8,13 @@ import {
   Citation,
   DocumentRecord,
   fetchDocuments,
+  fetchUsage,
   listTables,
   QueryResult,
   runQuery,
   TableInfo,
   uploadDocument,
+  UsageInfo,
 } from "@/lib/api";
 
 interface Message {
@@ -37,6 +39,7 @@ export default function WorkspacePage() {
   const [analyticsBusy, setAnalyticsBusy] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [tab, setTab] = useState<Tab>("chat");
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,12 +51,18 @@ export default function WorkspacePage() {
     listTables()
       .then(setTables)
       .catch(() => {});
+    fetchUsage()
+      .then(setUsage)
+      .catch(() => {});
   }, [router]);
 
   async function refreshDocuments() {
     setDocuments(await fetchDocuments());
     listTables()
       .then(setTables)
+      .catch(() => {});
+    fetchUsage()
+      .then(setUsage)
       .catch(() => {});
   }
 
@@ -134,9 +143,11 @@ export default function WorkspacePage() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 20,
+          gap: 12,
         }}
       >
         <h1 style={{ fontSize: 22, margin: 0 }}>MIOS Workspace</h1>
+        {usage && <UsageBadge usage={usage} />}
         <button className="btn btn-ghost" onClick={logout}>
           Sign out
         </button>
@@ -359,3 +370,43 @@ const activeTabStyle: React.CSSProperties = {
   borderColor: "var(--accent)",
   color: "var(--accent)",
 };
+
+function UsageBadge({ usage }: { usage: UsageInfo }) {
+  const used = usage.usage["chat_queries"] ?? 0;
+  const limit = usage.limits["chat_queries"] ?? 0;
+  const unlimited = limit < 0;
+  const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
+  return (
+    <span
+      className="muted"
+      title={`Estimated ${usage.estimated_minutes_saved} minutes of expert time saved this month`}
+      style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
+    >
+      <span className="badge">{usage.plan.name}</span>
+      <span>
+        {used}/{unlimited ? "∞" : limit} queries · ~{usage.estimated_minutes_saved} min saved
+      </span>
+      {!unlimited && (
+        <span
+          style={{
+            width: 70,
+            height: 5,
+            background: "var(--border)",
+            borderRadius: 4,
+            overflow: "hidden",
+            display: "inline-block",
+          }}
+        >
+          <span
+            style={{
+              display: "block",
+              width: `${pct}%`,
+              height: "100%",
+              background: pct > 90 ? "var(--danger)" : "var(--ok)",
+            }}
+          />
+        </span>
+      )}
+    </span>
+  );
+}

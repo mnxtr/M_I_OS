@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.deps import CurrentUser, DbDep
-from app.models import TableSource
+from app.models import TableSource, Tenant
 from app.services.llm import ANALYTICS_SYSTEM_PROMPT
+from app.services.plans import METRIC_ANALYTICS, enforce_quota, record_usage
 from app.services.sqlguard import (
     SQLValidationError,
     validate_sql,
@@ -198,8 +199,16 @@ async def synthesize_stream(question: str, sql: str, rows: list[dict]) -> AsyncI
         yield summary[chunk_start : chunk_start + 80]
 
 
+def _meter_analytics(db, user: CurrentUser) -> None:
+    tenant = db.get(Tenant, user.tenant_id)
+    plan = tenant.plan if tenant else "trial"
+    enforce_quota(db, user.tenant_id, plan, METRIC_ANALYTICS)
+    record_usage(db, user.tenant_id, METRIC_ANALYTICS)
+
+
 @router.post("/query", response_model=QueryOut)
 def run_query(payload: QueryIn, user: CurrentUser, db: DbDep) -> QueryOut:
+    _meter_analytics(db, user)
     sources = _resolve_tables(db, user.tenant_id, payload.table_id)
     sql = generate_sql(db, user.tenant_id, payload.question, sources)
     rows = execute_bounded(db, sql)
@@ -211,6 +220,7 @@ def run_query(payload: QueryIn, user: CurrentUser, db: DbDep) -> QueryOut:
 
 @router.post("/query/stream")
 def run_query_stream(payload: QueryIn, user: CurrentUser, db: DbDep) -> StreamingResponse:
+    _meter_analytics(db, user)
     sources = _resolve_tables(db, user.tenant_id, payload.table_id)
     sql = generate_sql(db, user.tenant_id, payload.question, sources)
     rows = execute_bounded(db, sql)

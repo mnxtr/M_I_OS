@@ -5,15 +5,25 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from app.deps import CurrentUser, DbDep
+from app.models import Tenant
 from app.schemas import ChatIn, ChatOut, Citation
 from app.services.llm import generate_answer, stream_answer
+from app.services.plans import METRIC_CHAT, enforce_quota, record_usage
 from app.services.retrieval import hybrid_search
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
 
+def _meter_chat(db, user: CurrentUser) -> None:
+    tenant = db.get(Tenant, user.tenant_id)
+    plan = tenant.plan if tenant else "trial"
+    enforce_quota(db, user.tenant_id, plan, METRIC_CHAT)
+    record_usage(db, user.tenant_id, METRIC_CHAT)
+
+
 @router.post("", response_model=ChatOut)
 def chat(payload: ChatIn, user: CurrentUser, db: DbDep) -> ChatOut:
+    _meter_chat(db, user)
     chunks = hybrid_search(db, payload.question, payload.top_k)
 
     contexts = [
@@ -30,6 +40,7 @@ def chat(payload: ChatIn, user: CurrentUser, db: DbDep) -> ChatOut:
 
 @router.post("/stream")
 def chat_stream(payload: ChatIn, user: CurrentUser, db: DbDep) -> StreamingResponse:
+    _meter_chat(db, user)
     chunks = hybrid_search(db, payload.question, payload.top_k)
     contexts = [
         {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
