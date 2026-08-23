@@ -9,6 +9,7 @@ from app.models import Tenant
 from app.schemas import ChatIn, ChatOut, Citation
 from app.services.llm import generate_answer, stream_answer
 from app.services.plans import METRIC_CHAT, enforce_quota, record_usage
+from app.services.query_understanding import expand_query
 from app.services.retrieval import hybrid_search
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
@@ -24,7 +25,10 @@ def _meter_chat(db, user: CurrentUser) -> None:
 @router.post("", response_model=ChatOut)
 def chat(payload: ChatIn, user: CurrentUser, db: DbDep) -> ChatOut:
     _meter_chat(db, user)
-    chunks = hybrid_search(db, payload.question, payload.top_k)
+    analysis = expand_query(payload.question)
+    chunks = hybrid_search(
+        db, payload.question, payload.top_k, variants=analysis.variants
+    )
 
     contexts = [
         {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
@@ -41,7 +45,10 @@ def chat(payload: ChatIn, user: CurrentUser, db: DbDep) -> ChatOut:
 @router.post("/stream")
 def chat_stream(payload: ChatIn, user: CurrentUser, db: DbDep) -> StreamingResponse:
     _meter_chat(db, user)
-    chunks = hybrid_search(db, payload.question, payload.top_k)
+    analysis = expand_query(payload.question)
+    chunks = hybrid_search(
+        db, payload.question, payload.top_k, variants=analysis.variants
+    )
     contexts = [
         {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
     ]

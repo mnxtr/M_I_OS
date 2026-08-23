@@ -19,13 +19,16 @@ class RetrievedChunk:
     score: float
 
 
-def hybrid_search(db: Session, question: str, top_k: int | None = None) -> list[RetrievedChunk]:
+def hybrid_search(
+    db: Session, question: str, top_k: int | None = None, variants: list[str] | None = None
+) -> list[RetrievedChunk]:
     """Dense (pgvector cosine) + keyword (tsvector) with reciprocal rank fusion.
+    Searches every query variant (e.g. Banglish → English expansion) and fuses.
     Tenant isolation comes from the RLS policy set on the session."""
     settings = get_settings()
     k = top_k or settings.retrieve_top_k
-    query_vector = embed_texts([question])[0]
-    literal = "[" + ",".join(f"{x:.6f}" for x in query_vector) + "]"
+    query_variants = variants or [question]
+    query_variants = [v for v in query_variants if v and v.strip()][:3]
 
     dense_sql = text(
         """
@@ -65,8 +68,12 @@ def hybrid_search(db: Session, question: str, top_k: int | None = None) -> list[
             for r in rows
         ]
 
-    dense = run(dense_sql, {"vec": literal, "k": k * 2})
-    keyword = run(keyword_sql, {"q": question, "k": k * 2})
+    dense: list[RetrievedChunk] = []
+    keyword: list[RetrievedChunk] = []
+    for variant in query_variants:
+        vector_literal = "[" + ",".join(f"{x:.6f}" for x in embed_texts([variant])[0]) + "]"
+        dense.extend(run(dense_sql, {"vec": vector_literal, "k": k * 2}))
+        keyword.extend(run(keyword_sql, {"q": variant, "k": k * 2}))
 
     fused: dict[uuid.UUID, tuple[float, RetrievedChunk]] = {}
     for rank, item in enumerate(dense + keyword):

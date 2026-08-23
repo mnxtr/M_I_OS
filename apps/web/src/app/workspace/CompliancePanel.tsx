@@ -15,8 +15,12 @@ import {
   TemplateInfo,
   updateAssessmentItem,
 } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/lib/useLang";
 
 export default function CompliancePanel() {
+  const [lang] = useLang();
+  const tr = t(lang);
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [assessments, setAssessments] = useState<AssessmentInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -108,18 +112,18 @@ export default function CompliancePanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <form onSubmit={onCreate} className="panel" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 14 }}>New audit readiness check</h3>
+        <h3 style={{ margin: 0, fontSize: 14 }}>{tr.newAuditCheck}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
           <select className="input" value={templateCode} onChange={(e) => setTemplateCode(e.target.value)}>
-            {templates.map((t) => (
-              <option key={t.code} value={t.code}>
-                {t.name}
+            {templates.map((tpl) => (
+              <option key={tpl.code} value={tpl.code}>
+                {tpl.name}
               </option>
             ))}
           </select>
           <input
             className="input"
-            placeholder="e.g. Buyer audit prep — Nov"
+            placeholder={tr.exampleTitle}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -132,7 +136,7 @@ export default function CompliancePanel() {
         </div>
         <div>
           <button className="btn" disabled={busy || !title.trim()}>
-            Create assessment
+            {tr.createAssessment}
           </button>
         </div>
       </form>
@@ -140,10 +144,8 @@ export default function CompliancePanel() {
       {error && <p className="error-text">{error}</p>}
 
       <div className="panel">
-        <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Assessments</h3>
-        {assessments.length === 0 && (
-          <p className="muted">No assessments yet — create one above.</p>
-        )}
+        <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>{tr.assessments}</h3>
+        {assessments.length === 0 && <p className="muted">{tr.noAssessments}</p>}
         {assessments.map((a) => (
           <div
             key={a.id}
@@ -175,7 +177,7 @@ export default function CompliancePanel() {
                   onAutoAssess();
                 }}
               >
-                Auto-assess
+                {tr.autoAssess}
               </button>
               <button
                 className="btn btn-ghost"
@@ -186,14 +188,14 @@ export default function CompliancePanel() {
                   );
                 }}
               >
-                Binder
+                {tr.binder}
               </button>
             </span>
           </div>
         ))}
         {selected && (
           <p className="muted" style={{ marginTop: 8 }}>
-            {runningRef ? `Assessing ${runningRef}…` : "Select an item row below to review evidence."}
+            {runningRef ? tr.assessing(runningRef) : tr.selectItemHint}
           </p>
         )}
       </div>
@@ -208,18 +210,23 @@ export default function CompliancePanel() {
                 {item.manually_set ? " ✎" : ""}
               </summary>
               <div style={{ padding: "10px 4px", fontSize: 13, display: "grid", gap: 8 }}>
-                <div className="muted">
-                  {item.category} — auditors look for: {item.guidance}
-                </div>
-                {item.ai_notes && <div>AI notes: {item.ai_notes}</div>}
+                <div className="muted">{item.category}</div>
+                {item.ai_notes && (
+                  <div>
+                    {tr.aiNotes} {item.ai_notes}
+                  </div>
+                )}
                 {item.evidence.length > 0 && (
-                  <ul style={{ paddingLeft: 18 }}>
-                    {item.evidence.map((c, i) => (
-                      <li key={i} className="muted">
-                        <strong>{c.document_name}</strong> p.{c.page}: {c.snippet.slice(0, 160)}…
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <div className="muted">{tr.evidence}</div>
+                    <ul style={{ paddingLeft: 18 }}>
+                      {item.evidence.map((c, i) => (
+                        <li key={i} className="muted">
+                          <strong>{c.document_name}</strong> p.{c.page}: {c.snippet.slice(0, 160)}…
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
                 {item.cap_text && (
                   <pre style={{ whiteSpace: "pre-wrap", background: "var(--bg)", padding: 10, borderRadius: 6 }}>
@@ -240,7 +247,7 @@ export default function CompliancePanel() {
                     ))}
                   </select>
                   <button className="btn btn-ghost" onClick={() => onDraftCap(item)}>
-                    Draft CAP
+                    {tr.draftCap}
                   </button>
                 </div>
               </div>

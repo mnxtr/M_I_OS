@@ -1,0 +1,12 @@
+{"id": "gs-001", "lang": "en", "question": "What is the minimum age verification procedure for new hires?", "expected_doc": "hiring_policy.pdf", "must_contain": ["age", "verification"]}
+{"id": "gs-002", "lang": "bn", "question": "নতুন কর্মীর বয়স যাচাইয়ের নিয়ম কী?", "expected_doc": "hiring_policy.pdf", "must_contain": []}
+{"id": "gs-003", "lang": "en", "question": "When was the last fire evacuation drill conducted and what was the evacuation time?", "expected_doc": "fire_drill_log.xlsx", "must_contain": ["drill"]}
+{"id": "gs-004", "lang": "bn-latin", "question": "shesh agni drill kokhon hoye chilo?", "expected_doc": "fire_drill_log.xlsx", "must_contain": []}
+{"id": "gs-005", "lang": "en", "question": "Which line had the lowest efficiency last Tuesday?", "expected_doc": "daily_production_report.xlsx", "must_contain": ["line"]}
+{"id": "gs-006", "lang": "bn-latin", "question": "goto shoptaho kon line er oyogunota shob theke kom chilo?", "expected_doc": "daily_production_report.xlsx", "must_contain": []}
+{"id": "gs-007", "lang": "en", "question": "What corrective actions were agreed after the last SMETA audit?", "expected_doc": "smeta_cap_2025.pdf", "must_contain": ["corrective"]}
+{"id": "gs-008", "lang": "en", "question": "Are chemical MSDS sheets available for the printing section?", "expected_doc": "msds_index.pdf", "must_contain": ["chemical"]}
+{"id": "gs-009", "lang": "bn", "question": "ওভারটাইম কি স্বেচ্ছায় করতে হয়? নিয়ম কী?", "expected_doc": "overtime_policy.pdf", "must_contain": []}
+{"id": "gs-010", "lang": "en", "question": "What PPE must sewing operators wear according to the safety SOP?", "expected_doc": "safety_sop.pdf", "must_contain": ["PPE"]}
+{"id": "gs-011", "lang": "en", "question": "Who is the responsible person for ETP operation records?", "expected_doc": "etp_register.xlsx", "must_contain": []}
+{"id": "gs-012", "lang": "bn-latin", "question": "ETP er record ke rakhe?", "expected_doc": "etp_register.xlsx", "must_contain": []}

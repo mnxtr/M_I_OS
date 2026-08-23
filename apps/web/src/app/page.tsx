@@ -3,9 +3,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, register } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/lib/useLang";
+import LangToggle from "@/components/LangToggle";
 
 export default function AuthPage() {
   const router = useRouter();
+  const [lang, setLang] = useLang();
+  const tr = t(lang);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [companyName, setCompanyName] = useState("");
   const [fullName, setFullName] = useState("");
@@ -39,10 +44,11 @@ export default function AuthPage() {
   return (
     <main className="container">
       <div style={{ maxWidth: 420, margin: "8vh auto" }}>
-        <h1 style={{ fontSize: 28, marginBottom: 4 }}>MIOS</h1>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Manufacturing OS Intelligence — ask your factory anything.
-        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <LangToggle lang={lang} onChange={setLang} />
+        </div>
+        <h1 style={{ fontSize: 28, marginBottom: 4 }}>{tr.appName}</h1>
+        <p className="muted" style={{ marginTop: 0 }}>{tr.tagline}</p>
 
         <form onSubmit={onSubmit} className="panel" style={{ display: "grid", gap: 12 }}>
           <div style={{ display: "flex", gap: 8 }}>
@@ -52,7 +58,7 @@ export default function AuthPage() {
               style={{ flex: 1, ...(mode === "login" ? activeTab : {}) }}
               onClick={() => setMode("login")}
             >
-              Sign in
+              {tr.signIn}
             </button>
             <button
               type="button"
@@ -60,7 +66,7 @@ export default function AuthPage() {
               style={{ flex: 1, ...(mode === "register" ? activeTab : {}) }}
               onClick={() => setMode("register")}
             >
-              Register factory
+              {tr.registerFactory}
             </button>
           </div>
 
@@ -68,14 +74,14 @@ export default function AuthPage() {
             <>
               <input
                 className="input"
-                placeholder="Company name (e.g. Meghna Apparels Ltd)"
+                placeholder={tr.companyName}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 required
               />
               <input
                 className="input"
-                placeholder="Your name"
+                placeholder={tr.yourName}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
@@ -84,7 +90,7 @@ export default function AuthPage() {
           <input
             className="input"
             type="email"
-            placeholder="Email"
+            placeholder={tr.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -92,7 +98,7 @@ export default function AuthPage() {
           <input
             className="input"
             type="password"
-            placeholder="Password (min 8 chars)"
+            placeholder={tr.password}
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -102,7 +108,7 @@ export default function AuthPage() {
           {error && <p className="error-text">{error}</p>}
 
           <button className="btn" disabled={busy}>
-            {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+            {busy ? tr.pleaseWait : mode === "login" ? tr.signIn : tr.createAccount}
           </button>
         </form>
       </div>

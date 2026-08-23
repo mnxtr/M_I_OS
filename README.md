@@ -71,6 +71,10 @@ Tests & lint:
 cd apps/api && .venv/bin/python -m pytest tests/test_units.py && .venv/bin/ruff check app tests
 ```
 
+**Bangla support:** UI toggle (EN/বাং) on every screen; queries in Bangla script, transliterated Banglish ("line 7 er output koto?"), or English all retrieve via query expansion + multi-variant fusion. OCR supports scanned Bangla docs (`tesseract-ocr-ben`).
+
+**Retrieval evals** (`evals/`): bilingual golden set + runner — `MIOS_TEST_DSN=... MIOS_EVAL_TENANT_ID=... python ../../evals/run_eval.py` reports hit@8/MRR; CI fails on >2pt regression vs `evals/baseline.json`.
+
 ## The one-page pitch
 
 | | |

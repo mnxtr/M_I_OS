@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CompliancePanel from "./CompliancePanel";
+import LangToggle from "@/components/LangToggle";
 import {
   askStream,
   Citation,
@@ -16,6 +17,8 @@ import {
   uploadDocument,
   UsageInfo,
 } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/lib/useLang";
 
 interface Message {
   role: "user" | "assistant";
@@ -28,6 +31,8 @@ type Tab = "chat" | "compliance";
 
 export default function WorkspacePage() {
   const router = useRouter();
+  const [lang, setLang] = useLang();
+  const tr = t(lang);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -146,20 +151,23 @@ export default function WorkspacePage() {
           gap: 12,
         }}
       >
-        <h1 style={{ fontSize: 22, margin: 0 }}>MIOS Workspace</h1>
+        <h1 style={{ fontSize: 22, margin: 0 }}>{tr.workspace}</h1>
         {usage && <UsageBadge usage={usage} />}
-        <button className="btn btn-ghost" onClick={logout}>
-          Sign out
-        </button>
+        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <LangToggle lang={lang} onChange={setLang} />
+          <button className="btn btn-ghost" onClick={logout}>
+            {tr.signOut}
+          </button>
+        </span>
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 20 }}>
         <section className="panel">
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>Knowledge Base</h2>
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>{tr.knowledgeBase}</h2>
           <input
             ref={fileInput}
             type="file"
-            accept=".pdf,.txt,.md"
+            accept=".pdf,.txt,.md,.docx,.xlsx,.csv"
             style={{ display: "none" }}
             onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])}
           />
@@ -169,7 +177,7 @@ export default function WorkspacePage() {
             disabled={busy}
             onClick={() => fileInput.current?.click()}
           >
-            Upload document (PDF/TXT)
+            {tr.uploadDoc}
           </button>
 
           <ul style={{ listStyle: "none", padding: 0, marginTop: 16 }}>
@@ -186,14 +194,12 @@ export default function WorkspacePage() {
                   <span className={`badge badge-${doc.status}`}>{doc.status}</span>
                 </div>
                 <div className="muted">
-                  {doc.doc_type} · {doc.page_count} pages
+                  {doc.doc_type} · {doc.page_count > 0 ? `${doc.page_count} ${tr.pages}` : ""}
                   {doc.error ? ` · ${doc.error}` : ""}
                 </div>
               </li>
             ))}
-            {documents.length === 0 && (
-              <li className="muted">No documents yet. Upload SOPs, audit reports, production sheets.</li>
-            )}
+            {documents.length === 0 && <li className="muted">{tr.noDocsYet}</li>}
           </ul>
         </section>
 
@@ -212,19 +218,19 @@ export default function WorkspacePage() {
                 style={tab === "chat" ? activeTabStyle : {}}
                 onClick={() => setTab("chat")}
               >
-                Ask your factory
+                {tr.askFactory}
               </button>
               <button
                 className="btn btn-ghost"
                 style={tab === "compliance" ? activeTabStyle : {}}
                 onClick={() => setTab("compliance")}
               >
-                Compliance Copilot
+                {tr.complianceCopilot}
               </button>
             </div>
             {tab === "chat" && (
               <button className="btn btn-ghost" onClick={() => setShowAnalytics((v) => !v)}>
-                {showAnalytics ? "Hide analytics" : `Analytics (${tables.length})`}
+                {showAnalytics ? tr.hideAnalytics : tr.analyticsWithCount(tables.length)}
               </button>
             )}
           </div>
@@ -246,20 +252,20 @@ export default function WorkspacePage() {
             >
               <div className="muted">
                 {tables.length === 0
-                  ? "Upload an Excel/CSV production sheet to enable analytics."
-                  : `Tables: ${tables.map((t) => `${t.name} (${t.row_count} rows)`).join(", ")}`}
+                  ? tr.analyticsHint
+                  : `${tr.tablesPrefix} ${tables.map((tb) => `${tb.name} (${tb.row_count} ${tr.rows})`).join(", ")}`}
               </div>
               {tables.length > 0 && (
                 <>
                   <form onSubmit={onAnalytics} style={{ display: "flex", gap: 8 }}>
                     <input
                       className="input"
-                      placeholder="e.g. total output by line"
+                      placeholder={tr.analyticsPlaceholder}
                       value={analyticsQuery}
                       onChange={(e) => setAnalyticsQuery(e.target.value)}
                     />
                     <button className="btn" disabled={analyticsBusy || !analyticsQuery.trim()}>
-                      Run
+                      {tr.run}
                     </button>
                   </form>
                   {queryResult && (
@@ -303,11 +309,7 @@ export default function WorkspacePage() {
           )}
 
           <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 12, alignContent: "start" }}>
-            {messages.length === 0 && (
-              <p className="muted">
-                Try: “What was Line 7&apos;s efficiency last week?” or “Show fire drill records.”
-              </p>
-            )}
+            {messages.length === 0 && <p className="muted">{tr.tryPrompt}</p>}
             {messages.map((msg, i) => (
               <div key={i}>
                 <div
@@ -327,7 +329,7 @@ export default function WorkspacePage() {
                 {msg.citations && msg.citations.length > 0 && (
                   <details style={{ marginTop: 6, marginLeft: 0 }}>
                     <summary className="muted" style={{ cursor: "pointer" }}>
-                      Sources ({msg.citations.length})
+                      {tr.sources(msg.citations.length)}
                     </summary>
                     <ul style={{ paddingLeft: 18 }}>
                       {msg.citations.map((c, j) => (
@@ -341,7 +343,7 @@ export default function WorkspacePage() {
               </div>
             ))}
             {busy && messages[messages.length - 1]?.text === "" && (
-              <p className="muted">Thinking…</p>
+              <p className="muted">{tr.thinking}</p>
             )}
           </div>
 
@@ -350,12 +352,12 @@ export default function WorkspacePage() {
           <form onSubmit={onAsk} style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <input
               className="input"
-              placeholder="Ask a question… (Bangla or English)"
+              placeholder={tr.askPlaceholder}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
             />
             <button className="btn" disabled={busy || !question.trim()}>
-              Ask
+              {tr.ask}
             </button>
           </form>
             </>
