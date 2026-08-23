@@ -3,10 +3,14 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ask,
+  askStream,
   Citation,
   DocumentRecord,
   fetchDocuments,
+  listTables,
+  QueryResult,
+  runQuery,
+  TableInfo,
   uploadDocument,
 } from "@/lib/api";
 
@@ -14,16 +18,21 @@ interface Message {
   role: "user" | "assistant";
   text: string;
   citations?: Citation[];
-  provider?: string;
+  streaming?: boolean;
 }
 
 export default function WorkspacePage() {
   const router = useRouter();
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [tables, setTables] = useState<TableInfo[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [analyticsQuery, setAnalyticsQuery] = useState("");
+  const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
+  const [analyticsBusy, setAnalyticsBusy] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,10 +41,16 @@ export default function WorkspacePage() {
       return;
     }
     refreshDocuments().catch(() => {});
+    listTables()
+      .then(setTables)
+      .catch(() => {});
   }, [router]);
 
   async function refreshDocuments() {
     setDocuments(await fetchDocuments());
+    listTables()
+      .then(setTables)
+      .catch(() => {});
   }
 
   async function onUpload(file: File) {
@@ -58,23 +73,47 @@ export default function WorkspacePage() {
     if (!q || busy) return;
     setError("");
     setQuestion("");
-    setMessages((m) => [...m, { role: "user", text: q }]);
+    setMessages((m) => [...m, { role: "user", text: q }, { role: "assistant", text: "", streaming: true }]);
     setBusy(true);
     try {
-      const res = await ask(q);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          text: res.answer,
-          citations: res.citations,
-          provider: res.provider,
-        },
-      ]);
+      await askStream(q, {
+        onToken: (token) =>
+          setMessages((m) => {
+            const copy = [...m];
+            const last = copy[copy.length - 1];
+            if (last?.role === "assistant") {
+              copy[copy.length - 1] = { ...last, text: last.text + token };
+            }
+            return copy;
+          }),
+      });
+      setMessages((m) => {
+        const copy = [...m];
+        const last = copy[copy.length - 1];
+        if (last?.role === "assistant") {
+          copy[copy.length - 1] = { ...last, streaming: false };
+        }
+        return copy;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Query failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onAnalytics(event: FormEvent) {
+    event.preventDefault();
+    const q = analyticsQuery.trim();
+    if (!q || analyticsBusy) return;
+    setAnalyticsBusy(true);
+    setError("");
+    try {
+      setQueryResult(await runQuery(q));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Analytics failed");
+    } finally {
+      setAnalyticsBusy(false);
     }
   }
 
@@ -144,7 +183,81 @@ export default function WorkspacePage() {
         </section>
 
         <section className="panel" style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>Ask your factory</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>Ask your factory</h2>
+            <button className="btn btn-ghost" onClick={() => setShowAnalytics((v) => !v)}>
+              {showAnalytics ? "Hide analytics" : `Analytics (${tables.length})`}
+            </button>
+          </div>
+
+          {showAnalytics && (
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 14,
+                marginBottom: 12,
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              <div className="muted">
+                {tables.length === 0
+                  ? "Upload an Excel/CSV production sheet to enable analytics."
+                  : `Tables: ${tables.map((t) => `${t.name} (${t.row_count} rows)`).join(", ")}`}
+              </div>
+              {tables.length > 0 && (
+                <>
+                  <form onSubmit={onAnalytics} style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="input"
+                      placeholder="e.g. total output by line"
+                      value={analyticsQuery}
+                      onChange={(e) => setAnalyticsQuery(e.target.value)}
+                    />
+                    <button className="btn" disabled={analyticsBusy || !analyticsQuery.trim()}>
+                      Run
+                    </button>
+                  </form>
+                  {queryResult && (
+                    <div style={{ fontSize: 13 }}>
+                      <p style={{ margin: "4px 0" }}>{queryResult.answer}</p>
+                      <details>
+                        <summary className="muted" style={{ cursor: "pointer" }}>
+                          SQL ({queryResult.row_count} rows)
+                        </summary>
+                        <pre style={{ whiteSpace: "pre-wrap", color: "var(--muted)" }}>{queryResult.sql}</pre>
+                        {queryResult.rows.length > 0 && (
+                          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                            <thead>
+                              <tr>
+                                {queryResult.columns.map((c) => (
+                                  <th key={c} style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: 4 }}>
+                                    {c}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {queryResult.rows.slice(0, 20).map((row, i) => (
+                                <tr key={i}>
+                                  {queryResult.columns.map((c) => (
+                                    <td key={c} style={{ borderBottom: "1px solid var(--border)", padding: 4 }}>
+                                      {String(row[c] ?? "")}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </details>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 12, alignContent: "start" }}>
             {messages.length === 0 && (
@@ -184,7 +297,9 @@ export default function WorkspacePage() {
                 )}
               </div>
             ))}
-            {busy && <p className="muted">Thinking…</p>}
+            {busy && messages[messages.length - 1]?.text === "" && (
+              <p className="muted">Thinking…</p>
+            )}
           </div>
 
           {error && <p className="error-text">{error}</p>}

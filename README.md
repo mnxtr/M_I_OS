@@ -60,6 +60,10 @@ npm install && npm run dev
 
 Open http://localhost:3000 → register a factory → upload PDF/TXT → chat with citations.
 
+**Supported inputs:** PDF, TXT, MD, DOCX, **XLSX/XLSM/CSV (→ queryable data tables)**, PNG/JPG (OCR via tesseract, optional: `apt install tesseract-ocr tesseract-ocr-ben`).
+
+**Analytics:** after uploading a spreadsheet, open *Analytics* in the workspace and ask things like "total output by line" — NL→SQL with guardrails (read-only, statement timeout, hard LIMIT). Requires an LLM provider key.
+
 Without LLM keys the API runs in **offline mode**: deterministic local embeddings + extractive answers. Set `EMBEDDING_PROVIDER=openai` / `LLM_PROVIDER=anthropic|openai` in `apps/api/.env` for full quality.
 
 Tests & lint:

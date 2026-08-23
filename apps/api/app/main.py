@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db import Base, engine
 from app.models import Chunk  # noqa: F401 — ensure models registered before create_all
-from app.routers import auth, chat, documents
+from app.routers import analytics, auth, chat, documents
 
 
 @asynccontextmanager
@@ -26,8 +26,7 @@ def _init_schema() -> None:
 
     apply_rls()
     statements = [
-        f"ALTER TABLE chunks ADD COLUMN IF NOT EXISTS embedding "
-        f"vector({settings.embedding_dim})",
+        f"ALTER TABLE chunks ADD COLUMN IF NOT EXISTS embedding vector({settings.embedding_dim})",
         "ALTER TABLE chunks ADD COLUMN IF NOT EXISTS content_tsv tsvector "
         "GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED",
         "CREATE INDEX IF NOT EXISTS ix_chunks_tsv ON chunks USING GIN (content_tsv)",
@@ -44,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(documents.router)
     app.include_router(chat.router)
+    app.include_router(analytics.router)
 
     @app.get("/health")
     def health() -> dict:

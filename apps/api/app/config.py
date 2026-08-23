@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     chunk_overlap: int = 150
     retrieve_top_k: int = 8
 
+    ocr_dpi: int = 300
+    analytics_max_rows: int = 50000
+    analytics_result_limit: int = 1000
+    analytics_timeout_ms: int = 5000
+
 
 @lru_cache
 def get_settings() -> Settings:

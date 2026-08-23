@@ -99,12 +99,37 @@ class Chunk(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
-RLS_TABLES = ["documents", "chunks"]
+class TableSource(Base):
+    __tablename__ = "table_sources"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, index=True
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    sheet_name: Mapped[str] = mapped_column(String(200), default="")
+    columns: Mapped[list] = mapped_column(JSONB, default=list)
+    row_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
-RLS_POLICY = (
-    "USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)"
-)
+class TableRow(Base):
+    __tablename__ = "table_rows"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    table_source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    row_number: Mapped[int] = mapped_column(Integer)
+    data: Mapped[dict] = mapped_column(JSONB)
+
+    __table_args__ = (Index("ix_table_rows_source_row", "table_source_id", "row_number"),)
+
+
+RLS_TABLES = ["documents", "chunks", "table_sources", "table_rows"]
+
+
+RLS_POLICY = "USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)"
 
 
 def apply_rls() -> None:
@@ -116,12 +141,9 @@ def apply_rls() -> None:
             conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
             exists = conn.execute(
                 text(
-                    "SELECT 1 FROM pg_policies WHERE tablename=:t "
-                    "AND policyname='tenant_isolation'"
+                    "SELECT 1 FROM pg_policies WHERE tablename=:t AND policyname='tenant_isolation'"
                 ),
                 {"t": table},
             ).scalar()
             if not exists:
-                conn.execute(
-                    text(f"CREATE POLICY tenant_isolation ON {table} {RLS_POLICY}")
-                )
+                conn.execute(text(f"CREATE POLICY tenant_isolation ON {table} {RLS_POLICY}"))
