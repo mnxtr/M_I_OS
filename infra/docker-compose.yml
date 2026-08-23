@@ -1,0 +1,48 @@
+# Local dev stack — MIOS Phase 1
+# Usage: docker compose -f infra/docker-compose.yml up -d
+
+name: mios-dev
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mios-postgres
+    environment:
+      POSTGRES_USER: mios
+      POSTGRES_PASSWORD: mios_dev
+      POSTGRES_DB: mios
+    ports:
+      - "5432:5432"
+    volumes:
+      - mios_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mios"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: mios-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - mios_redisdata:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: mios-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: mios
+      MINIO_ROOT_PASSWORD: mios_dev_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - mios_miniodata:/data
+
+volumes:
+  mios_pgdata:
+  mios_redisdata:
+  mios_miniodata:
