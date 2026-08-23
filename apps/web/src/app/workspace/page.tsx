@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import CompliancePanel from "./CompliancePanel";
 import {
   askStream,
   Citation,
@@ -21,6 +22,8 @@ interface Message {
   streaming?: boolean;
 }
 
+type Tab = "chat" | "compliance";
+
 export default function WorkspacePage() {
   const router = useRouter();
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -33,6 +36,7 @@ export default function WorkspacePage() {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [analyticsBusy, setAnalyticsBusy] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [tab, setTab] = useState<Tab>("chat");
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -183,13 +187,41 @@ export default function WorkspacePage() {
         </section>
 
         <section className="panel" style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>Ask your factory</h2>
-            <button className="btn btn-ghost" onClick={() => setShowAnalytics((v) => !v)}>
-              {showAnalytics ? "Hide analytics" : `Analytics (${tables.length})`}
-            </button>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                style={tab === "chat" ? activeTabStyle : {}}
+                onClick={() => setTab("chat")}
+              >
+                Ask your factory
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={tab === "compliance" ? activeTabStyle : {}}
+                onClick={() => setTab("compliance")}
+              >
+                Compliance Copilot
+              </button>
+            </div>
+            {tab === "chat" && (
+              <button className="btn btn-ghost" onClick={() => setShowAnalytics((v) => !v)}>
+                {showAnalytics ? "Hide analytics" : `Analytics (${tables.length})`}
+              </button>
+            )}
           </div>
 
+          {tab === "compliance" ? (
+            <CompliancePanel />
+          ) : (
+            <>
           {showAnalytics && (
             <div
               style={{
@@ -315,8 +347,15 @@ export default function WorkspacePage() {
               Ask
             </button>
           </form>
+            </>
+          )}
         </section>
       </div>
     </main>
   );
 }
+
+const activeTabStyle: React.CSSProperties = {
+  borderColor: "var(--accent)",
+  color: "var(--accent)",
+};

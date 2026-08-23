@@ -216,9 +216,7 @@ def run_query_stream(payload: QueryIn, user: CurrentUser, db: DbDep) -> Streamin
     rows = execute_bounded(db, sql)
 
     def sse_event(event_type: str, payload_data) -> str:
-        body = json.dumps(
-            {"type": event_type, **payload_data}, ensure_ascii=False, default=str
-        )
+        body = json.dumps({"type": event_type, **payload_data}, ensure_ascii=False, default=str)
         return f"data: {body}\n\n"
 
     async def event_stream() -> AsyncIterator[str]:

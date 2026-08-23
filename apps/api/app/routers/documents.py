@@ -52,8 +52,7 @@ def _set_chunk_embedding(db, chunk_id: uuid.UUID, vector: list[float]) -> None:
     literal = "[" + ",".join(f"{x:.6f}" for x in vector) + "]"
     db.execute(
         sql_text(
-            "UPDATE chunks SET embedding = :vec::vector, embedding_dim = :dim "
-            "WHERE id = :cid"
+            "UPDATE chunks SET embedding = :vec::vector, embedding_dim = :dim WHERE id = :cid"
         ),
         {"vec": literal, "dim": len(vector), "cid": str(chunk_id)},
     )

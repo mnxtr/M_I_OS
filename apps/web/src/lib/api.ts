@@ -181,3 +181,155 @@ export async function runQuery(
   });
   return handle<QueryResult>(res);
 }
+
+export interface TemplateInfo {
+  code: string;
+  name: string;
+  version: number;
+  description: string;
+  item_count: number;
+}
+
+export async function listTemplates(): Promise<TemplateInfo[]> {
+  const res = await fetch(`${API_URL}/v1/compliance/templates`, {
+    headers: authHeaders(),
+  });
+  return handle<TemplateInfo[]>(res);
+}
+
+export interface AssessmentInfo {
+  id: string;
+  title: string;
+  template_code: string;
+  due_date: string;
+  status: string;
+  created_at: string;
+  counts: Record<string, number>;
+}
+
+export async function listAssessments(): Promise<AssessmentInfo[]> {
+  const res = await fetch(`${API_URL}/v1/compliance/assessments`, {
+    headers: authHeaders(),
+  });
+  return handle<AssessmentInfo[]>(res);
+}
+
+export async function createAssessment(
+  templateCode: string,
+  title: string,
+  dueDate: string,
+): Promise<AssessmentInfo> {
+  const res = await fetch(`${API_URL}/v1/compliance/assessments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ template_code: templateCode, title, due_date: dueDate }),
+  });
+  return handle<AssessmentInfo>(res);
+}
+
+export interface AssessmentItemRecord {
+  id: string;
+  ref: string;
+  category: string;
+  title: string;
+  guidance: string;
+  status: string;
+  manually_set: boolean;
+  ai_notes: string;
+  cap_text: string;
+  evidence: Citation[];
+}
+
+export async function getAssessmentItems(
+  assessmentId: string,
+): Promise<AssessmentItemRecord[]> {
+  const res = await fetch(
+    `${API_URL}/v1/compliance/assessments/${assessmentId}`,
+    { headers: authHeaders() },
+  );
+  return handle<AssessmentItemRecord[]>(res);
+}
+
+export async function autoAssessStream(
+  assessmentId: string,
+  onEvent: (event: { type: string; ref?: string; status?: string }) => void,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/v1/compliance/assessments/${assessmentId}/auto-assess`,
+    { method: "POST", headers: authHeaders() },
+  );
+  if (!res.ok || !res.body) {
+    await handle(res);
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        onEvent(JSON.parse(line.slice(6)));
+      } catch {
+        // ignore malformed frames
+      }
+    }
+  }
+}
+
+const ITEM_STATUSES = [
+  "pending",
+  "compliant",
+  "partial",
+  "gap",
+  "unknown",
+  "not_applicable",
+];
+
+export { ITEM_STATUSES };
+
+export async function updateAssessmentItem(
+  itemId: string,
+  patch: { status?: string; cap_text?: string },
+): Promise<AssessmentItemRecord> {
+  const res = await fetch(`${API_URL}/v1/compliance/items/${itemId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(patch),
+  });
+  return handle<AssessmentItemRecord>(res);
+}
+
+export async function draftCap(itemId: string): Promise<AssessmentItemRecord> {
+  const res = await fetch(`${API_URL}/v1/compliance/items/${itemId}/cap`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  return handle<AssessmentItemRecord>(res);
+}
+
+export function binderUrl(assessmentId: string): string {
+  return `${API_URL}/v1/compliance/assessments/${assessmentId}/binder`;
+}
+
+export async function downloadBinder(assessmentId: string): Promise<void> {
+  const res = await fetch(binderUrl(assessmentId), { headers: authHeaders() });
+  if (!res.ok) {
+    await handle(res);
+    return;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `binder-${assessmentId}.zip`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

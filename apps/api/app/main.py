@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db import Base, engine
 from app.models import Chunk  # noqa: F401 — ensure models registered before create_all
-from app.routers import analytics, auth, chat, documents
+from app.routers import analytics, auth, chat, compliance, documents, guest
 
 
 @asynccontextmanager
@@ -44,6 +44,8 @@ def create_app() -> FastAPI:
     app.include_router(documents.router)
     app.include_router(chat.router)
     app.include_router(analytics.router)
+    app.include_router(compliance.router)
+    app.include_router(guest.router)
 
     @app.get("/health")
     def health() -> dict:

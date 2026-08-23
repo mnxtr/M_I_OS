@@ -126,7 +126,75 @@ class TableRow(Base):
     __table_args__ = (Index("ix_table_rows_source_row", "table_source_id", "row_number"),)
 
 
-RLS_TABLES = ["documents", "chunks", "table_sources", "table_rows"]
+class ChecklistTemplate(Base):
+    __tablename__ = "checklist_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    description: Mapped[str] = mapped_column(Text, default="")
+    items: Mapped[list] = mapped_column(JSONB, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Assessment(Base):
+    __tablename__ = "assessments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    template_code: Mapped[str] = mapped_column(String(100))
+    title: Mapped[str] = mapped_column(String(300))
+    due_date: Mapped[str] = mapped_column(String(20), default="")
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|running|complete
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (Index("ix_assessments_tenant_created", "tenant_id", "created_at"),)
+
+
+class AssessmentItem(Base):
+    __tablename__ = "assessment_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    assessment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    ref: Mapped[str] = mapped_column(String(30))
+    category: Mapped[str] = mapped_column(String(80))
+    title: Mapped[str] = mapped_column(Text)
+    guidance: Mapped[str] = mapped_column(Text, default="")
+    # pending | compliant | partial | gap | unknown | not_applicable
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    manually_set: Mapped[bool] = mapped_column(Boolean, default=False)
+    evidence: Mapped[list] = mapped_column(JSONB, default=list)
+    ai_notes: Mapped[str] = mapped_column(Text, default="")
+    cap_text: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+
+class GuestToken(Base):
+    __tablename__ = "guest_tokens"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    label: Mapped[str] = mapped_column(String(200), default="")
+    scope_all_documents: Mapped[bool] = mapped_column(Boolean, default=False)
+    document_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+RLS_TABLES = [
+    "documents",
+    "chunks",
+    "table_sources",
+    "table_rows",
+    "assessments",
+    "assessment_items",
+    "guest_tokens",
+]
 
 
 RLS_POLICY = "USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)"
