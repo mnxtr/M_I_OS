@@ -1,4 +1,3 @@
-import shutil
 import uuid
 from pathlib import Path
 
@@ -14,23 +13,23 @@ from app.schemas import DocumentOut
 from app.services import tabular
 from app.services.embeddings import embed_texts
 from app.services.ocr import OcrUnavailableError
-from app.services.parsers import detect_parser, is_tabular_file
+from app.services.parsers import ALLOWED_EXTENSIONS, detect_parser, is_tabular_file
 from app.services.plans import METRIC_PAGES, record_usage
 
 router = APIRouter(prefix="/v1/documents", tags=["documents"])
 
-ALLOWED_EXTENSIONS = {
-    ".pdf",
-    ".txt",
-    ".md",
-    ".docx",
-    ".xlsx",
-    ".xlsm",
-    ".csv",
-    ".png",
-    ".jpg",
-    ".jpeg",
-}
+
+def dispatch_processing(background, document_id: uuid.UUID) -> None:
+    """Route document processing through Celery when enabled; inline otherwise."""
+    from app.config import get_settings as gs
+
+    if gs().use_celery:
+        from app.worker import celery_app
+
+        if celery_app is not None:
+            celery_app.send_task("mios.process_document", args=[str(document_id)])
+            return
+    background.add_task(process_document, document_id)
 
 
 def chunk_text(text: str, size: int, overlap: int) -> list[str]:
@@ -163,6 +162,47 @@ def process_document(document_id: uuid.UUID) -> None:
         db.close()
 
 
+def create_and_store_document(
+    db,
+    background,
+    tenant_id: uuid.UUID,
+    uploaded_by: uuid.UUID | None,
+    filename: str,
+    content: bytes,
+    doc_type: str = "other",
+    department: str = "general",
+) -> Document:
+    """Persist an uploaded file and queue processing. Shared by UI upload and connectors."""
+    settings = get_settings()
+    suffix = Path(filename).suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            f"Unsupported file type {suffix}. Allowed: {sorted(ALLOWED_EXTENSIONS)}",
+        )
+
+    storage_root = Path(settings.storage_dir) / str(tenant_id)
+    storage_root.mkdir(parents=True, exist_ok=True)
+    doc_id = uuid.uuid4()
+    dest = storage_root / f"{doc_id}{suffix}"
+    dest.write_bytes(content)
+
+    document = Document(
+        id=doc_id,
+        tenant_id=tenant_id,
+        uploaded_by=uploaded_by,
+        filename=filename,
+        doc_type="data" if is_tabular_file(filename) else doc_type,
+        department=department,
+        status="processing",
+        storage_path=str(dest),
+    )
+    db.add(document)
+    db.flush()
+    dispatch_processing(background, doc_id)
+    return document
+
+
 @router.post("", response_model=DocumentOut, status_code=status.HTTP_202_ACCEPTED)
 def upload(
     background: BackgroundTasks,
@@ -172,34 +212,17 @@ def upload(
     doc_type: str = "other",
     department: str = "general",
 ) -> Document:
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            f"Unsupported file type {suffix}. Allowed: {sorted(ALLOWED_EXTENSIONS)}",
-        )
-
-    storage_root = Path(get_settings().storage_dir) / str(user.tenant_id)
-    storage_root.mkdir(parents=True, exist_ok=True)
-    doc_id = uuid.uuid4()
-    dest = storage_root / f"{doc_id}{suffix}"
-    with dest.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
-
-    document = Document(
-        id=doc_id,
+    content = file.file.read()
+    return create_and_store_document(
+        db=db,
+        background=background,
         tenant_id=user.tenant_id,
         uploaded_by=user.id,
-        filename=file.filename or dest.name,
-        doc_type="data" if is_tabular_file(file.filename or "") else doc_type,
+        filename=file.filename or "upload.bin",
+        content=content,
+        doc_type=doc_type,
         department=department,
-        status="processing",
-        storage_path=str(dest),
     )
-    db.add(document)
-    db.flush()
-    background.add_task(process_document, doc_id)
-    return document
 
 
 @router.get("", response_model=list[DocumentOut])

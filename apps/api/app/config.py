@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     analytics_result_limit: int = 1000
     analytics_timeout_ms: int = 5000
 
+    use_celery: bool = False
+    redis_url: str = "redis://localhost:6379/0"
+
 
 @lru_cache
 def get_settings() -> Settings:

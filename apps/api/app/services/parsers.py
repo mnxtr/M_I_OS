@@ -71,6 +71,24 @@ def is_tabular_file(filename: str) -> bool:
     return Path(filename).suffix.lower() in {".xlsx", ".xlsm", ".csv"}
 
 
+ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".txt",
+    ".md",
+    ".docx",
+    ".xlsx",
+    ".xlsm",
+    ".csv",
+    ".png",
+    ".jpg",
+    ".jpeg",
+}
+
+
+def extension_allowed(filename: str) -> bool:
+    return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
+
+
 def sanitize_identifier(name: str) -> str:
     cleaned = re.sub(r"[^0-9a-zA-Z_\u0980-\u09FF]+", "_", name.strip()).strip("_")
     lowered = re.sub(r"(?<!^)(?=[A-Z])", "_", cleaned).lower()

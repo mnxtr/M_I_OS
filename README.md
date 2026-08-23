@@ -75,6 +75,10 @@ cd apps/api && .venv/bin/python -m pytest tests/test_units.py && .venv/bin/ruff 
 
 **Retrieval evals** (`evals/`): bilingual golden set + runner — `MIOS_TEST_DSN=... MIOS_EVAL_TENANT_ID=... python ../../evals/run_eval.py` reports hit@8/MRR; CI fails on >2pt regression vs `evals/baseline.json`.
 
+**Scale & connectors:**
+- **Celery worker**: set `USE_CELERY=true` (+ Redis from compose) and run `cd apps/api && celery -A app.worker worker -l info` (install extra: `pip install -e ".[worker]"`). Default dev mode processes inline via BackgroundTasks.
+- **Email-in ingestion**: `GET /v1/connectors/email/secret` → point a mailbox forwarding rule / IMAP poller at `POST /v1/connectors/email/inbound` with raw MIME + `X-MIOS-Secret` header. Attachments (PDF/XLSX/DOCX/images) auto-ingest; doc type guessed from subject line.
+
 ## The one-page pitch
 
 | | |
