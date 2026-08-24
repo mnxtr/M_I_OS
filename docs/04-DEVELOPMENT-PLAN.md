@@ -57,15 +57,16 @@ Everything needed to put the product in front of a real factory safely.
 | Security pass 1 | Rate limiting, audit-log table+UI, RBAC test matrix, secrets handling review | Pen-test checklist clean |
 | Golden eval set | 50→150 Q/A from 3 real factory doc sets (50% bn) | hit@8 ≥75%, faithfulness ≥85% measured |
 | Discovery & pilots | 25 interviews; 3 LOIs; pilot playbook doc | First factory uploading real docs |
-| Payment rails ⚠️ | Decision D-3 below → implement chosen rail(s) | Test-mode charge succeeds |
+| Payment rails | **bKash merchant** (D-3): checkout + callback webhook; invoice-PDF path for bank-transfer payers | Test-mode charge succeeds |
 
 ### Phase B — GA Launch (Months 4–8)
 
 Self-serve motion + integrations that shorten time-to-value.
 
+- **OTP-first auth (D-5)**: email OTP issue/verify (rate-limited), SMS gateway abstraction; passwords stay for owner/admin
 - Self-serve onboarding wizard (guided upload, sample-data sandbox, glossary setup)
 - Integrations: **Odoo connector** (XML-RPC read-only), SFTP/Drive folder sync, email-in IMAP poller (poller complements existing webhook)
-- **Quality Intelligence**: defect Pareto over QC tables, similar-defect retrieval, weekly auto-digest to directors
+- **Quality Intelligence** (D-4): defect Pareto over QC tables, similar-defect retrieval, weekly auto-digest to directors
 - Admin console: user management UI, audit-log viewer, connector management
 - Billing lifecycle: trials, dunning, invoice PDFs (BDT), plan-gated features wired to metering
 - Infra: managed Postgres (backups/PITR), staging environment, error budgets
@@ -108,9 +109,9 @@ Self-serve motion + integrations that shorten time-to-value.
 |---|---|---|
 | local | dev | docker-compose (pgvector, redis, minio) |
 | staging | pre-prod, eval runs | single small VM, seeded synthetic tenant |
-| prod | customers | managed PG + app services + workers; region per D-2 |
+| prod | customers | **Dhaka DC (D-2)**: app VMs + workers + self-managed Postgres w/ PITR; UPS/generator; encrypted off-site backup sink abroad (disclosed in DPA) |
 
-Deploy = GitHub Actions → build/push images → migrate → rolling deploy. Feature flags via env (`USE_CELERY`, `EMBEDDING_PROVIDER`, …). Rollback = previous image tag.
+Deploy = GitHub Actions → build/push images → migrate → rolling deploy. Feature flags via env (`USE_CELERY`, `EMBEDDING_PROVIDER`, …). Rollback = previous image tag. Local hosting means we own power/network redundancy — restore drills are a Phase B exit gate, not optional.
 
 ## 5. Observability & SLOs
 
@@ -169,11 +170,21 @@ North star: expert-hours returned / factory / week
 |---|---|---|
 | ADR-001 | JSONB row storage for spreadsheets (bounded-wrapper text-to-SQL) | Accepted |
 | ADR-002 *(pending)* | pgvector→Qdrant migration trigger | Deferred to Phase C checkpoint |
-| D-1 ⚠️ | Primary LLM provider & multi-provider routing stance | **Open — asked today** |
-| D-2 ⚠️ | Cloud provider & hosting region (+ on-prem kit timing) | **Open — asked today** |
-| D-3 ⚠️ | Payment rail priority for BD | **Open — asked today** |
-| D-4 ⚠️ | Next major module after Phase A | **Open — asked today** |
-| D-5 ⚠️ | Auth model for factory-floor users (passwords vs OTP-first) | **Open — asked today** |
+| **D-1** | **OpenAI-primary LLM stack** — GPT-4o-mini-class default for cost, GPT-4-class for complex synthesis/verdicts; Anthropic retained as coded fallback; extractive mode stays for offline/dev. Margin levers (routing, semantic cache) become mandatory before Growth-tier scale. | **Accepted 2026-08-24** |
+| **D-2** | **Local BD hosting first** — production in a Dhaka data center. Data-residency is the trust wedge for R2 (buyer-sensitive docs never leave the country). Consequences we own: UPS/generator redundancy, self-managed Postgres w/ PITR discipline, documented restore drills (Phase B gate). On-prem kit stays Phase C enterprise option. | **Accepted 2026-08-24** |
+| **D-3** | **bKash merchant first** — instant digital collection fits trial→starter conversion; bank-transfer/invoice PDF path built alongside for larger factories (their actual B2B habit); Stripe deferred until foreign-currency tenants appear. | **Accepted 2026-08-24** |
+| **D-4** | **Quality Intelligence is the next major module** (post Phase-A hardening) — defect Pareto over QC tables we already ingest + similar-defect retrieval. Cheapest high-demo-value build on existing analytics/RAG rails. Odoo connector follows once a live tenant instance is available to verify against. | **Accepted 2026-08-24** |
+| **D-5** | **OTP-first auth, passwords optional** — email OTP at launch (free), SMS aggregator (e.g., local bulk-SMS gateway) added when floor-user volume justifies cost. Passwords remain for owner/admin accounts. | **Accepted 2026-08-24** |
+
+### Decision consequences → backlog deltas
+
+| From | Added work |
+|---|---|
+| D-1 | Semantic answer cache moves from "nice-to-have" to Phase B required; per-tenant cost caps surfaced in admin console |
+| D-2 | Phase A adds: select DC vendor, UPS sizing, off-site encrypted backup target (e.g., S3 Mumbai as backup-only sink — data at rest in BD, disaster-copy abroad disclosed in DPA) |
+| D-3 | Phase A payment-rails task redefined: bKash Merchant API (checkout + callback webhook) + invoice PDF generator |
+| D-4 | Quality Intelligence spec drafted end of Phase A; build starts Phase B week 1 |
+| D-5 | Auth refactor scheduled early Phase B: OTP issue/verify endpoints, rate-limited, email delivery via SMTP; SMS gateway abstraction behind interface |
 
 ## 12. Risk register (expanded)
 

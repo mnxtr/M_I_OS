@@ -12,11 +12,12 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
     storage_dir: str = "./storage"
 
-    embedding_provider: str = "local"  # local | openai
+    embedding_provider: str = "openai"  # openai | local
     embedding_dim: int = 384
     openai_api_key: str = ""
 
-    llm_provider: str = "none"  # none | openai | anthropic
+    # D-1 decision: OpenAI-primary. Falls back to extractive/local when no key set.
+    llm_provider: str = "openai"  # openai | anthropic | none
     anthropic_api_key: str = ""
 
     chunk_size: int = 1200
