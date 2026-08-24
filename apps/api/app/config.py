@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     use_celery: bool = False
     redis_url: str = "redis://localhost:6379/0"
 
+    # Payments (D-3: bKash-first)
+    bkash_base_url: str = "https://tokenized.sandbox.bka.sh/v1.2.0-beta"
+    bkash_app_key: str = ""
+    bkash_app_secret: str = ""
+    bkash_username: str = ""
+    bkash_password: str = ""
+    public_base_url: str = "http://localhost:3000"
+    usd_to_bdt_rate: float = 120.0
+
 
 @lru_cache
 def get_settings() -> Settings:

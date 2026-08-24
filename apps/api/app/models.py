@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -204,6 +205,23 @@ class MonthlyUsage(Base):
     )
 
 
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    provider: Mapped[str] = mapped_column(String(20), default="bkash")  # bkash | bank_transfer
+    invoice_no: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    plan: Mapped[str] = mapped_column(String(30))
+    months: Mapped[int] = mapped_column(Integer, default=1)
+    amount_bdt: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(20), default="initiated")
+    bkash_payment_id: Mapped[str] = mapped_column(String(100), default="", index=True)
+    raw_response: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 RLS_TABLES = [
     "documents",
     "chunks",
@@ -213,6 +231,7 @@ RLS_TABLES = [
     "assessment_items",
     "guest_tokens",
     "monthly_usage",
+    "payments",
 ]
 
 
