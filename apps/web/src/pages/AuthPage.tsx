@@ -1,14 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { login, register } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useLang } from "@/lib/useLang";
 import LangToggle from "@/components/LangToggle";
 
 export default function AuthPage() {
-  const router = useRouter();
+  const router = useNavigate();
   const [lang, setLang] = useLang();
   const tr = t(lang);
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -20,7 +20,7 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("mios_token")) router.replace("/workspace");
+    if (localStorage.getItem("mios_token")) router("/workspace");
   }, [router]);
 
   async function onSubmit(event: FormEvent) {
@@ -33,7 +33,7 @@ export default function AuthPage() {
           ? await login(email, password)
           : await register(companyName, fullName, email, password);
       localStorage.setItem("mios_token", token);
-      router.push("/workspace");
+      router("/workspace");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

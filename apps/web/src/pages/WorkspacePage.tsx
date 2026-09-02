@@ -1,8 +1,6 @@
-"use client";
-
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import CompliancePanel from "./CompliancePanel";
+import { useNavigate } from "react-router-dom";
+import CompliancePanel from "@/components/CompliancePanel";
 import LangToggle from "@/components/LangToggle";
 import {
   askStream,
@@ -30,7 +28,7 @@ interface Message {
 type Tab = "chat" | "compliance";
 
 export default function WorkspacePage() {
-  const router = useRouter();
+  const router = useNavigate();
   const [lang, setLang] = useLang();
   const tr = t(lang);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -49,7 +47,7 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     if (!localStorage.getItem("mios_token")) {
-      router.replace("/");
+      router("/");
       return;
     }
     refreshDocuments().catch(() => {});
@@ -91,7 +89,11 @@ export default function WorkspacePage() {
     if (!q || busy) return;
     setError("");
     setQuestion("");
-    setMessages((m) => [...m, { role: "user", text: q }, { role: "assistant", text: "", streaming: true }]);
+    setMessages((m) => [
+      ...m,
+      { role: "user", text: q },
+      { role: "assistant", text: "", streaming: true },
+    ]);
     setBusy(true);
     try {
       await askStream(q, {
@@ -137,7 +139,7 @@ export default function WorkspacePage() {
 
   function logout() {
     localStorage.removeItem("mios_token");
-    router.replace("/");
+    router("/");
   }
 
   return (
@@ -149,6 +151,7 @@ export default function WorkspacePage() {
           alignItems: "center",
           marginBottom: 20,
           gap: 12,
+          flexWrap: "wrap",
         }}
       >
         <h1 style={{ fontSize: 22, margin: 0 }}>{tr.workspace}</h1>
@@ -184,10 +187,7 @@ export default function WorkspacePage() {
             {documents.map((doc) => (
               <li
                 key={doc.id}
-                style={{
-                  padding: "10px 0",
-                  borderBottom: "1px solid var(--border)",
-                }}
+                style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                   <span style={{ fontSize: 14, overflowWrap: "anywhere" }}>{doc.filename}</span>
@@ -203,13 +203,18 @@ export default function WorkspacePage() {
           </ul>
         </section>
 
-        <section className="panel" style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}>
+        <section
+          className="panel"
+          style={{ display: "flex", flexDirection: "column", minHeight: "70vh" }}
+        >
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               marginBottom: 8,
+              gap: 8,
+              flexWrap: "wrap",
             }}
           >
             <div style={{ display: "flex", gap: 8 }}>
@@ -239,127 +244,147 @@ export default function WorkspacePage() {
             <CompliancePanel />
           ) : (
             <>
-          {showAnalytics && (
-            <div
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: 14,
-                marginBottom: 12,
-                display: "grid",
-                gap: 10,
-              }}
-            >
-              <div className="muted">
-                {tables.length === 0
-                  ? tr.analyticsHint
-                  : `${tr.tablesPrefix} ${tables.map((tb) => `${tb.name} (${tb.row_count} ${tr.rows})`).join(", ")}`}
-              </div>
-              {tables.length > 0 && (
-                <>
-                  <form onSubmit={onAnalytics} style={{ display: "flex", gap: 8 }}>
-                    <input
-                      className="input"
-                      placeholder={tr.analyticsPlaceholder}
-                      value={analyticsQuery}
-                      onChange={(e) => setAnalyticsQuery(e.target.value)}
-                    />
-                    <button className="btn" disabled={analyticsBusy || !analyticsQuery.trim()}>
-                      {tr.run}
-                    </button>
-                  </form>
-                  {queryResult && (
-                    <div style={{ fontSize: 13 }}>
-                      <p style={{ margin: "4px 0" }}>{queryResult.answer}</p>
-                      <details>
-                        <summary className="muted" style={{ cursor: "pointer" }}>
-                          SQL ({queryResult.row_count} rows)
-                        </summary>
-                        <pre style={{ whiteSpace: "pre-wrap", color: "var(--muted)" }}>{queryResult.sql}</pre>
-                        {queryResult.rows.length > 0 && (
-                          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                            <thead>
-                              <tr>
-                                {queryResult.columns.map((c) => (
-                                  <th key={c} style={{ textAlign: "left", borderBottom: "1px solid var(--border)", padding: 4 }}>
-                                    {c}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {queryResult.rows.slice(0, 20).map((row, i) => (
-                                <tr key={i}>
-                                  {queryResult.columns.map((c) => (
-                                    <td key={c} style={{ borderBottom: "1px solid var(--border)", padding: 4 }}>
-                                      {String(row[c] ?? "")}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        )}
-                      </details>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 12, alignContent: "start" }}>
-            {messages.length === 0 && <p className="muted">{tr.tryPrompt}</p>}
-            {messages.map((msg, i) => (
-              <div key={i}>
+              {showAnalytics && (
                 <div
                   style={{
-                    background: msg.role === "user" ? "var(--accent-dark)" : "var(--bg)",
-                    border: `1px solid ${msg.role === "user" ? "transparent" : "var(--border)"}`,
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
-                    padding: 12,
-                    whiteSpace: "pre-wrap",
-                    fontSize: 14,
-                    marginLeft: msg.role === "user" ? 48 : 0,
-                    marginRight: msg.role === "assistant" ? 48 : 0,
+                    padding: 14,
+                    marginBottom: 12,
+                    display: "grid",
+                    gap: 10,
                   }}
                 >
-                  {msg.text}
+                  <div className="muted">
+                    {tables.length === 0
+                      ? tr.analyticsHint
+                      : `${tr.tablesPrefix} ${tables.map((tb) => `${tb.name} (${tb.row_count} ${tr.rows})`).join(", ")}`}
+                  </div>
+                  {tables.length > 0 && (
+                    <>
+                      <form onSubmit={onAnalytics} style={{ display: "flex", gap: 8 }}>
+                        <input
+                          className="input"
+                          placeholder={tr.analyticsPlaceholder}
+                          value={analyticsQuery}
+                          onChange={(e) => setAnalyticsQuery(e.target.value)}
+                        />
+                        <button
+                          className="btn"
+                          disabled={analyticsBusy || !analyticsQuery.trim()}
+                        >
+                          {tr.run}
+                        </button>
+                      </form>
+                      {queryResult && (
+                        <div style={{ fontSize: 13 }}>
+                          <p style={{ margin: "4px 0" }}>{queryResult.answer}</p>
+                          <details>
+                            <summary className="muted" style={{ cursor: "pointer" }}>
+                              SQL ({queryResult.row_count})
+                            </summary>
+                            <pre style={{ whiteSpace: "pre-wrap", color: "var(--muted)" }}>
+                              {queryResult.sql}
+                            </pre>
+                            {queryResult.rows.length > 0 && (
+                              <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                                <thead>
+                                  <tr>
+                                    {queryResult.columns.map((c) => (
+                                      <th
+                                        key={c}
+                                        style={{
+                                          textAlign: "left",
+                                          borderBottom: "1px solid var(--border)",
+                                          padding: 4,
+                                        }}
+                                      >
+                                        {c}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {queryResult.rows.slice(0, 20).map((row, i) => (
+                                    <tr key={i}>
+                                      {queryResult.columns.map((c) => (
+                                        <td
+                                          key={c}
+                                          style={{
+                                            borderBottom: "1px solid var(--border)",
+                                            padding: 4,
+                                          }}
+                                        >
+                                          {String(row[c] ?? "")}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </details>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-                {msg.citations && msg.citations.length > 0 && (
-                  <details style={{ marginTop: 6, marginLeft: 0 }}>
-                    <summary className="muted" style={{ cursor: "pointer" }}>
-                      {tr.sources(msg.citations.length)}
-                    </summary>
-                    <ul style={{ paddingLeft: 18 }}>
-                      {msg.citations.map((c, j) => (
-                        <li key={j} className="muted" style={{ margin: "6px 0" }}>
-                          <strong>{c.document_name}</strong> p.{c.page}: {c.snippet}…
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
+              )}
+
+              <div
+                style={{ flex: 1, overflowY: "auto", display: "grid", gap: 12, alignContent: "start" }}
+              >
+                {messages.length === 0 && <p className="muted">{tr.tryPrompt}</p>}
+                {messages.map((msg, i) => (
+                  <div key={i}>
+                    <div
+                      style={{
+                        background: msg.role === "user" ? "var(--accent-dark)" : "var(--bg)",
+                        border: `1px solid ${msg.role === "user" ? "transparent" : "var(--border)"}`,
+                        borderRadius: 8,
+                        padding: 12,
+                        whiteSpace: "pre-wrap",
+                        fontSize: 14,
+                        marginLeft: msg.role === "user" ? 48 : 0,
+                        marginRight: msg.role === "assistant" ? 48 : 0,
+                      }}
+                    >
+                      {msg.text}
+                    </div>
+                    {msg.citations && msg.citations.length > 0 && (
+                      <details style={{ marginTop: 6, marginLeft: 0 }}>
+                        <summary className="muted" style={{ cursor: "pointer" }}>
+                          {tr.sources(msg.citations.length)}
+                        </summary>
+                        <ul style={{ paddingLeft: 18 }}>
+                          {msg.citations.map((c, j) => (
+                            <li key={j} className="muted" style={{ margin: "6px 0" }}>
+                              <strong>{c.document_name}</strong> p.{c.page}: {c.snippet}…
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                ))}
+                {busy && messages[messages.length - 1]?.text === "" && (
+                  <p className="muted">{tr.thinking}</p>
                 )}
               </div>
-            ))}
-            {busy && messages[messages.length - 1]?.text === "" && (
-              <p className="muted">{tr.thinking}</p>
-            )}
-          </div>
 
-          {error && <p className="error-text">{error}</p>}
+              {error && <p className="error-text">{error}</p>}
 
-          <form onSubmit={onAsk} style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <input
-              className="input"
-              placeholder={tr.askPlaceholder}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-            />
-            <button className="btn" disabled={busy || !question.trim()}>
-              {tr.ask}
-            </button>
-          </form>
+              <form onSubmit={onAsk} style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <input
+                  className="input"
+                  placeholder={tr.askPlaceholder}
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                />
+                <button className="btn" disabled={busy || !question.trim()}>
+                  {tr.ask}
+                </button>
+              </form>
             </>
           )}
         </section>

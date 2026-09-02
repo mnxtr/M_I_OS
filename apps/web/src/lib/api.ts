@@ -1,5 +1,5 @@
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 export interface Citation {
   document_id: string;
