@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from app.deps import CurrentUser, DbDep
 from app.models import Tenant
 from app.schemas import ChatIn, ChatOut, Citation
-from app.services.llm import generate_answer, stream_answer
+from app.services.brain import answer_question, build_metadata
+from app.services.llm import stream_answer
 from app.services.plans import METRIC_CHAT, enforce_quota, record_usage
 from app.services.query_understanding import expand_query
 from app.services.retrieval import hybrid_search
@@ -30,15 +31,21 @@ def chat(payload: ChatIn, user: CurrentUser, db: DbDep) -> ChatOut:
         db, payload.question, payload.top_k, variants=analysis.variants
     )
 
-    contexts = [
-        {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
-    ]
-    answer, provider = generate_answer(payload.question, contexts)
+    contexts = _contexts(chunks)
+    result = answer_question(payload.question, contexts, payload.top_k)
 
     return ChatOut(
-        answer=answer,
+        answer=result.answer,
         citations=_citations(chunks),
-        provider=provider,
+        provider=result.provider,
+        model=result.model,
+        trace_id=result.trace_id,
+        confidence=result.confidence,
+        evidence_coverage=result.evidence_coverage,
+        freshness=result.freshness,
+        limitations=result.limitations,
+        suggested_actions=result.suggested_actions,
+        latency_ms=result.latency_ms,
     )
 
 
@@ -49,19 +56,33 @@ def chat_stream(payload: ChatIn, user: CurrentUser, db: DbDep) -> StreamingRespo
     chunks = hybrid_search(
         db, payload.question, payload.top_k, variants=analysis.variants
     )
-    contexts = [
-        {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
-    ]
+    contexts = _contexts(chunks)
     citations_payload = [c.model_dump(mode="json") for c in _citations(chunks)]
+    metadata = build_metadata(contexts, payload.top_k)
 
     def sse(event_type: str, data) -> str:
         return f"data: {json.dumps({'type': event_type, **data}, ensure_ascii=False)}\n\n"
 
     async def event_stream() -> AsyncIterator[str]:
-        yield sse("citations", {"citations": citations_payload})
+        yield sse(
+            "metadata",
+            {
+                "provider": metadata.provider,
+                "model": metadata.model,
+                "trace_id": metadata.trace_id,
+                "confidence": metadata.confidence,
+                "evidence_coverage": metadata.evidence_coverage,
+                "freshness": metadata.freshness,
+                "suggested_actions": metadata.suggested_actions,
+            },
+        )
+        for citation in citations_payload:
+            yield sse("citation", {"citation": citation})
+        for limitation in metadata.limitations:
+            yield sse("warning", {"message": limitation})
         async for token in stream_answer(payload.question, contexts):
             yield sse("token", {"value": token})
-        yield sse("done", {})
+        yield sse("done", {"trace_id": metadata.trace_id})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -76,4 +97,16 @@ def _citations(chunks) -> list[Citation]:
             snippet=c.content[:300],
         )
         for c in chunks
+    ]
+
+
+def _contexts(chunks) -> list[dict]:
+    return [
+        {
+            "document_name": chunk.document_name,
+            "page": chunk.page,
+            "content": chunk.content,
+            "score": chunk.score,
+        }
+        for chunk in chunks
     ]

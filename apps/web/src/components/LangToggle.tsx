@@ -10,25 +10,19 @@ export default function LangToggle({
   onChange: (lang: Lang) => void;
 }) {
   return (
-    <span style={{ display: "inline-flex", gap: 4 }}>
+    <span className="lang-toggle" role="group" aria-label="Language / ভাষা">
       <button
-        className="btn btn-ghost"
-        style={{
-          padding: "4px 10px",
-          fontSize: 12,
-          ...(lang === "en" ? { borderColor: "var(--accent)", color: "var(--accent)" } : {}),
-        }}
+        type="button"
+        className={lang === "en" ? "is-active" : ""}
+        aria-pressed={lang === "en"}
         onClick={() => onChange("en")}
       >
         EN
       </button>
       <button
-        className="btn btn-ghost"
-        style={{
-          padding: "4px 10px",
-          fontSize: 12,
-          ...(lang === "bn" ? { borderColor: "var(--accent)", color: "var(--accent)" } : {}),
-        }}
+        type="button"
+        className={lang === "bn" ? "is-active" : ""}
+        aria-pressed={lang === "bn"}
         onClick={() => onChange("bn")}
       >
         বাং

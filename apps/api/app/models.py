@@ -49,8 +49,11 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
+    auth_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), unique=True, index=True, nullable=True
+    )
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
+    password_hash: Mapped[str] = mapped_column(String(255), default="")
     full_name: Mapped[str] = mapped_column(String(200), default="")
     role: Mapped[str] = mapped_column(
         Enum(
@@ -65,6 +68,35 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Factory(Base):
+    __tablename__ = "factories"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    timezone: Mapped[str] = mapped_column(String(80), default="Asia/Dhaka")
+    currency: Mapped[str] = mapped_column(String(10), default="BDT")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FactoryMembership(Base):
+    __tablename__ = "factory_memberships"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
+    factory_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("factories.id"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    role: Mapped[str] = mapped_column(String(50), default="operator")
+    capabilities: Mapped[list] = mapped_column(JSONB, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        Index("ix_factory_membership_unique", "factory_id", "user_id", unique=True),
+    )
 
 
 class Document(Base):
@@ -223,6 +255,8 @@ class Payment(Base):
 
 
 RLS_TABLES = [
+    "factories",
+    "factory_memberships",
     "documents",
     "chunks",
     "table_sources",
@@ -245,6 +279,7 @@ def apply_rls() -> None:
     with engine.begin() as conn:
         for table in RLS_TABLES:
             conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
+            conn.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
             exists = conn.execute(
                 text(
                     "SELECT 1 FROM pg_policies WHERE tablename=:t AND policyname='tenant_isolation'"
@@ -252,4 +287,10 @@ def apply_rls() -> None:
                 {"t": table},
             ).scalar()
             if not exists:
-                conn.execute(text(f"CREATE POLICY tenant_isolation ON {table} {RLS_POLICY}"))
+                conn.execute(
+                    text(
+                        f"CREATE POLICY tenant_isolation ON {table} {RLS_POLICY} "
+                        "WITH CHECK (tenant_id = NULLIF("
+                        "current_setting('app.tenant_id', true), '')::uuid)"
+                    )
+                )

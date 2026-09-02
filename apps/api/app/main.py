@@ -12,6 +12,7 @@ from app.routers import (
     chat,
     compliance,
     connectors,
+    dashboard,
     documents,
     guest,
     payments,
@@ -29,6 +30,8 @@ def _init_schema() -> None:
     """Dev bootstrap: create tables, vector/tsvector columns, RLS policies.
     (Alembic migrations replace this in Phase 2.)"""
     settings = get_settings()
+    if not settings.auto_create_schema:
+        return
     with engine.begin() as conn:
         conn.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
     Base.metadata.create_all(engine)
@@ -51,6 +54,7 @@ def _init_schema() -> None:
 def create_app() -> FastAPI:
     app = FastAPI(title="MIOS API", version="0.1.0", lifespan=lifespan)
     app.include_router(auth.router)
+    app.include_router(dashboard.router)
     app.include_router(documents.router)
     app.include_router(chat.router)
     app.include_router(analytics.router)

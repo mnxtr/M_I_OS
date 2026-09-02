@@ -6,15 +6,25 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+psycopg://mios:mios_dev@localhost:5432/mios"
-    jwt_secret: str = "dev-secret"
+    database_url: str = "postgresql+psycopg://localhost:5432/mios"
+    jwt_secret: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+    supabase_audience: str = "authenticated"
+    supabase_auto_provision_pilot: bool = False
+    auto_create_schema: bool = True
     storage_dir: str = "./storage"
 
     embedding_provider: str = "openai"  # openai | local
     embedding_dim: int = 384
     openai_api_key: str = ""
+    openai_model: str = "gpt-5.6-terra"
+    openai_reasoning_effort: str = "low"
+    openai_verbosity: str = "low"
+    openai_timeout_seconds: float = 30.0
+    openai_store_responses: bool = False
 
     # D-1 decision: OpenAI-primary. Falls back to extractive/local when no key set.
     llm_provider: str = "openai"  # openai | anthropic | none

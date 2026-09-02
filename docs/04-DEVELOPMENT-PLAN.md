@@ -1,5 +1,10 @@
 # 04 — Development Plan (Comprehensive, 18-Month Roadmap)
 
+> **Plan integration notice (2026-09-02):** This historical roadmap has been incorporated into
+> the canonical [`PLAN.md`](../PLAN.md). Use that plan for current phase status, architecture,
+> milestones, and acceptance gates. This file is retained for the original commercial context,
+> budget assumptions, decision history, and traceability.
+
 **Last updated:** 2026-08-24 · **Status:** Phase 1–2 build substantially complete; pre-pilot
 **Decision log:** see §11 (open decisions flagged ⚠️ need founder sign-off)
 

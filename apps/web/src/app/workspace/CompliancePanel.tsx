@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+
 import {
   AssessmentInfo,
   AssessmentItemRecord,
@@ -33,57 +34,67 @@ export default function CompliancePanel() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    refresh().catch(() => {});
+    void loadComplianceData();
   }, []);
 
-  async function refresh() {
-    const [templateList, assessmentList] = await Promise.all([
-      listTemplates(),
-      listAssessments(),
-    ]);
-    setTemplates(templateList);
-    if (!templateCode && templateList.length > 0) {
-      setTemplateCode(templateList[0].code);
+  async function loadComplianceData() {
+    try {
+      const [templateList, assessmentList] = await Promise.all([
+        listTemplates(),
+        listAssessments(),
+      ]);
+      setTemplates(templateList);
+      setTemplateCode((current) => current || templateList[0]?.code || "");
+      setAssessments(assessmentList);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load compliance data");
     }
-    setAssessments(assessmentList);
-    if (selected) await loadItems(selected);
   }
 
   async function loadItems(assessmentId: string) {
     setSelected(assessmentId);
-    setItems(await getAssessmentItems(assessmentId));
+    try {
+      setItems(await getAssessmentItems(assessmentId));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load assessment");
+    }
   }
 
-  async function onCreate(event: React.FormEvent) {
+  async function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!templateCode || !title.trim()) return;
     setBusy(true);
     setError("");
+
     try {
       const created = await createAssessment(templateCode, title.trim(), dueDate);
       setTitle("");
       setDueDate("");
-      await refresh();
+      await loadComplianceData();
       await loadItems(created.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create assessment");
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Failed to create assessment");
     } finally {
       setBusy(false);
     }
   }
 
-  async function onAutoAssess() {
-    if (!selected || busy) return;
+  async function onAutoAssess(assessmentId: string) {
+    if (busy) return;
     setBusy(true);
+    setSelected(assessmentId);
     setError("");
+
     try {
-      await autoAssessStream(selected, (event) => {
-        if (event.type === "verdict" && event.ref) setRunningRef(null);
+      await autoAssessStream(assessmentId, (event) => {
+        if (event.type === "verdict") setRunningRef(null);
         if (event.type === "progress" && event.ref) setRunningRef(event.ref);
       });
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Auto-assessment failed");
+      await Promise.all([loadComplianceData(), loadItems(assessmentId)]);
+    } catch (assessmentError) {
+      setError(
+        assessmentError instanceof Error ? assessmentError.message : "Auto-assessment failed",
+      );
     } finally {
       setBusy(false);
       setRunningRef(null);
@@ -93,175 +104,243 @@ export default function CompliancePanel() {
   async function onOverride(item: AssessmentItemRecord, newStatus: string) {
     try {
       const updated = await updateAssessmentItem(item.id, { status: newStatus });
-      setItems((list) => list.map((i) => (i.id === updated.id ? { ...i, ...updated } : i)));
-      await listAssessments().then(setAssessments);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === updated.id ? { ...currentItem, ...updated } : currentItem,
+        ),
+      );
+      setAssessments(await listAssessments());
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Update failed");
     }
   }
 
   async function onDraftCap(item: AssessmentItemRecord) {
     try {
       const updated = await draftCap(item.id);
-      setItems((list) => list.map((i) => (i.id === updated.id ? { ...i, ...updated } : i)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "CAP drafting failed");
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === updated.id ? { ...currentItem, ...updated } : currentItem,
+        ),
+      );
+    } catch (draftError) {
+      setError(draftError instanceof Error ? draftError.message : "Corrective action drafting failed");
     }
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <form onSubmit={onCreate} className="panel" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 14 }}>{tr.newAuditCheck}</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          <select className="input" value={templateCode} onChange={(e) => setTemplateCode(e.target.value)}>
-            {templates.map((tpl) => (
-              <option key={tpl.code} value={tpl.code}>
-                {tpl.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className="input"
-            placeholder={tr.exampleTitle}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <input
-            className="input"
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
-        </div>
+    <div className="workspace-view compliance-view">
+      <section className="view-intro">
         <div>
-          <button className="btn" disabled={busy || !title.trim()}>
-            {tr.createAssessment}
-          </button>
+          <p className="eyebrow">{tr.evidenceFirst}</p>
+          <h1>{tr.complianceCopilot}</h1>
+          <p>{tr.prepareAuditCopy}</p>
         </div>
-      </form>
+        <span className="count-badge">{assessments.length}</span>
+      </section>
 
-      {error && <p className="error-text">{error}</p>}
+      <section className="section-card assessment-create-card">
+        <div className="section-heading">
+          <p className="eyebrow">{tr.newAuditCheck}</p>
+          <h2>{tr.createAssessment}</h2>
+          <p>{tr.newAuditDescription}</p>
+        </div>
 
-      <div className="panel">
-        <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>{tr.assessments}</h3>
-        {assessments.length === 0 && <p className="muted">{tr.noAssessments}</p>}
-        {assessments.map((a) => (
-          <div
-            key={a.id}
-            onClick={() => loadItems(a.id)}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 0",
-              borderBottom: "1px solid var(--border)",
-              cursor: "pointer",
-              fontWeight: selected === a.id ? 600 : 400,
-            }}
-          >
-            <span style={{ fontSize: 14 }}>{a.title}</span>
-            <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {Object.entries(a.counts).map(([statusKey, count]) => (
-                <span key={statusKey} className={`badge badge-${badgeClass(statusKey)}`}>
-                  {statusKey}: {count}
-                </span>
+        <form onSubmit={onCreate} className="assessment-form">
+          <label className="field-label">
+            <span>{tr.templateLabel}</span>
+            <select
+              className="input"
+              value={templateCode}
+              onChange={(event) => setTemplateCode(event.target.value)}
+              required
+            >
+              {templates.map((template) => (
+                <option key={template.code} value={template.code}>
+                  {template.name} · {template.item_count}
+                </option>
               ))}
-              <button
-                className="btn btn-ghost"
-                disabled={busy}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelected(a.id);
-                  onAutoAssess();
-                }}
-              >
-                {tr.autoAssess}
-              </button>
-              <button
-                className="btn btn-ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  downloadBinder(a.id).catch((err) =>
-                    setError(err instanceof Error ? err.message : "Download failed"),
-                  );
-                }}
-              >
-                {tr.binder}
-              </button>
-            </span>
-          </div>
-        ))}
-        {selected && (
-          <p className="muted" style={{ marginTop: 8 }}>
-            {runningRef ? tr.assessing(runningRef) : tr.selectItemHint}
-          </p>
-        )}
-      </div>
+            </select>
+          </label>
+          <label className="field-label">
+            <span>{tr.assessmentTitleLabel}</span>
+            <input
+              className="input"
+              placeholder={tr.exampleTitle}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+            />
+          </label>
+          <label className="field-label">
+            <span>{tr.dueDateLabel}</span>
+            <input
+              className="input"
+              type="date"
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
+            />
+          </label>
+          <button className="btn btn-primary" disabled={busy || !templateCode || !title.trim()}>
+            {busy ? tr.pleaseWait : tr.createAssessment}
+          </button>
+        </form>
+      </section>
 
-      {items.length > 0 && (
-        <div className="panel" style={{ display: "grid", gap: 12 }}>
-          {items.map((item) => (
-            <details key={item.id}>
-              <summary style={{ cursor: "pointer", fontSize: 14 }}>
-                <span className={`badge badge-${badgeClass(item.status)}`}>{item.status}</span>{" "}
-                <strong>[{item.ref}]</strong> {item.title}
-                {item.manually_set ? " ✎" : ""}
-              </summary>
-              <div style={{ padding: "10px 4px", fontSize: 13, display: "grid", gap: 8 }}>
-                <div className="muted">{item.category}</div>
-                {item.ai_notes && (
-                  <div>
-                    {tr.aiNotes} {item.ai_notes}
-                  </div>
-                )}
-                {item.evidence.length > 0 && (
-                  <>
-                    <div className="muted">{tr.evidence}</div>
-                    <ul style={{ paddingLeft: 18 }}>
-                      {item.evidence.map((c, i) => (
-                        <li key={i} className="muted">
-                          <strong>{c.document_name}</strong> p.{c.page}: {c.snippet.slice(0, 160)}…
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-                {item.cap_text && (
-                  <pre style={{ whiteSpace: "pre-wrap", background: "var(--bg)", padding: 10, borderRadius: 6 }}>
-                    {item.cap_text}
-                  </pre>
-                )}
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select
-                    className="input"
-                    style={{ width: 170 }}
-                    value={item.status}
-                    onChange={(e) => onOverride(item, e.target.value)}
-                  >
-                    {ITEM_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="btn btn-ghost" onClick={() => onDraftCap(item)}>
-                    {tr.draftCap}
+      {error ? (
+        <p className="error-text global-alert" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="compliance-layout">
+        <section className="section-card assessment-list-card">
+          <div className="section-heading section-heading-inline">
+            <div>
+              <p className="eyebrow">{tr.assessments}</p>
+              <h2>{tr.workspacePulse}</h2>
+            </div>
+            <span className="count-badge">{assessments.length}</span>
+          </div>
+
+          {assessments.length > 0 ? (
+            <div className="assessment-list">
+              {assessments.map((assessment) => (
+                <article
+                  className={selected === assessment.id ? "assessment-card is-selected" : "assessment-card"}
+                  key={assessment.id}
+                >
+                  <button className="assessment-open" onClick={() => void loadItems(assessment.id)}>
+                    <span className="assessment-code">{assessment.template_code}</span>
+                    <strong>{assessment.title}</strong>
+                    <small>
+                      {assessment.due_date || tr.noDueDate} · {assessment.status}
+                    </small>
                   </button>
-                </div>
-              </div>
-            </details>
-          ))}
-        </div>
-      )}
+                  <div className="assessment-counts">
+                    {Object.entries(assessment.counts).map(([statusKey, count]) => (
+                      <span key={statusKey} className={`status-badge status-${statusClass(statusKey)}`}>
+                        {statusKey} {count}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="assessment-actions">
+                    <button
+                      className="btn btn-secondary"
+                      disabled={busy}
+                      onClick={() => void onAutoAssess(assessment.id)}
+                    >
+                      {tr.autoAssess}
+                    </button>
+                    <button
+                      className="btn btn-quiet"
+                      onClick={() =>
+                        void downloadBinder(assessment.id).catch((downloadError) =>
+                          setError(
+                            downloadError instanceof Error
+                              ? downloadError.message
+                              : "Download failed",
+                          ),
+                        )
+                      }
+                    >
+                      {tr.binder}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state compact-empty-state">
+              <span className="empty-index">00</span>
+              <h3>{tr.noAssessments}</h3>
+            </div>
+          )}
+        </section>
+
+        <section className="section-card requirement-card">
+          <div className="section-heading">
+            <p className="eyebrow">{tr.requirementStatus}</p>
+            <h2>{runningRef ? tr.assessing(runningRef) : tr.evidence}</h2>
+            <p>{tr.selectItemHint}</p>
+          </div>
+
+          {items.length > 0 ? (
+            <div className="requirement-list">
+              {items.map((item) => (
+                <details className="requirement-item" key={item.id}>
+                  <summary>
+                    <span className={`status-badge status-${statusClass(item.status)}`}>
+                      {item.status}
+                    </span>
+                    <span className="requirement-ref">{item.ref}</span>
+                    <strong>{item.title}</strong>
+                    {item.manually_set ? <small>{tr.manualOverride}</small> : null}
+                  </summary>
+                  <div className="requirement-detail">
+                    <p className="requirement-category">{item.category}</p>
+                    {item.guidance ? <p>{item.guidance}</p> : null}
+                    {item.ai_notes ? (
+                      <div className="evidence-block">
+                        <strong>{tr.aiNotes}</strong>
+                        <p>{item.ai_notes}</p>
+                      </div>
+                    ) : null}
+                    {item.evidence.length > 0 ? (
+                      <div className="evidence-block">
+                        <strong>{tr.evidence}</strong>
+                        {item.evidence.map((citation, index) => (
+                          <article className="citation-card" key={`${citation.document_id}-${index}`}>
+                            <span>{String(index + 1).padStart(2, "0")}</span>
+                            <div>
+                              <strong>{citation.document_name}</strong>
+                              <small>
+                                p.{citation.page} · {citation.snippet.slice(0, 180)}
+                              </small>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+                    {item.cap_text ? <pre className="cap-copy">{item.cap_text}</pre> : null}
+                    <div className="requirement-actions">
+                      <label className="field-label compact-field">
+                        <span>{tr.requirementStatus}</span>
+                        <select
+                          className="input"
+                          value={item.status}
+                          onChange={(event) => void onOverride(item, event.target.value)}
+                        >
+                          {ITEM_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button className="btn btn-secondary" onClick={() => void onDraftCap(item)}>
+                        {tr.draftCap}
+                      </button>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state compact-empty-state">
+              <span className="empty-index">N/A</span>
+              <p>{tr.selectItemHint}</p>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
 
-function badgeClass(statusKey: string): string {
-  if (statusKey === "compliant") return "ready";
-  if (statusKey === "gap") return "failed";
-  if (statusKey === "pending" || statusKey === "partial") return "processing";
-  return "";
+function statusClass(status: string): string {
+  if (status === "compliant" || status === "ready" || status === "complete") return "ready";
+  if (status === "gap" || status === "failed") return "failed";
+  if (status === "unknown") return "unknown";
+  return "processing";
 }
