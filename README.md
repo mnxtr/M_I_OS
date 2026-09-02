@@ -202,6 +202,7 @@ Tenant isolation is treated as a core architectural requirement rather than a UI
 
 ```text
 M_I_OS/
+├── PLAN.md                           # Canonical phased product and delivery plan
 ├── apps/
 │   ├── api/                         # FastAPI backend and intelligence services
 │   └── web/                         # Next.js frontend
@@ -215,11 +216,16 @@ M_I_OS/
 │   ├── 03-RAG-DESIGN.md             # Retrieval and ingestion design
 │   ├── 04-DEVELOPMENT-PLAN.md       # Development roadmap
 │   ├── 05-BANGLADESH-GTM.md         # Market and go-to-market strategy
+│   ├── 06-FRONTEND-EXPERIENCE-PLAN.md # Frontend UX and implementation roadmap
+│   ├── 07-PILOT-BACKEND-AND-PREVIEW.md # Supabase pilot and preview runbook
+│   ├── WORKLOG.md                    # Dated implementation and verification log
 │   └── adr/                          # Architecture decision records
 │
 ├── evals/                            # Retrieval evaluation datasets and runners
 ├── infra/
 │   └── docker-compose.yml            # Local infrastructure
+├── supabase/
+│   └── migrations/                    # Hosted pilot schema, seed data, and RLS
 │
 └── README.md
 ```
@@ -231,7 +237,7 @@ M_I_OS/
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 20+
+- Node.js 22+
 - Docker + Docker Compose
 - Git
 
@@ -272,6 +278,7 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd apps/web
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
@@ -281,6 +288,12 @@ Open:
 http://localhost:3000
 ```
 
+The shareable pilot frontend uses Supabase Auth, private object storage, and
+per-user seed provisioning. Add the hosted project URL and publishable key to
+`apps/web/.env.local`; never expose a service-role key in the browser. See
+[`docs/07-PILOT-BACKEND-AND-PREVIEW.md`](docs/07-PILOT-BACKEND-AND-PREVIEW.md)
+for the full pilot runbook.
+
 ### 5. Configure AI providers
 
 For full-quality generation and embeddings, configure the provider settings in `apps/api/.env`.
@@ -288,9 +301,14 @@ For full-quality generation and embeddings, configure the provider settings in `
 ```env
 EMBEDDING_PROVIDER=openai
 LLM_PROVIDER=openai
+OPENAI_API_KEY=<server-only project key>
+OPENAI_MODEL=gpt-5.6-terra
 ```
 
-MIOS is also designed to support an offline development mode using deterministic local embeddings and extractive responses when external model keys are not configured.
+The key is read only by FastAPI/Render and must never be placed in a `NEXT_PUBLIC_*` variable or
+browser bundle. MIOS uses the Responses API for generation and is also designed to support an
+offline development mode using deterministic local embeddings and evidence-only extractive responses
+when external model keys are not configured.
 
 ---
 
