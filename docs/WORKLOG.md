@@ -40,6 +40,15 @@ Use one dated section per work session. Mark only verified outcomes as complete.
 - ✅ Consolidated previous roadmap, frontend, and pilot documents into canonical `PLAN.md` v2.0.
 - ✅ TypeScript strict check passed.
 - ✅ Next.js production build passed on Node 22 by invoking the local Next binary directly.
+- ✅ Created `codex/mios-pilot-foundation`, reconciled it onto the newer `main`, and opened draft
+  PR [#2](https://github.com/mnxtr/M_I_OS/pull/2). The PR deliberately restores Next.js after a
+  concurrent Vite migration because the approved SSR/auth/proxy architecture requires it.
+- ✅ GitHub CI run 5 passed on the PR commit.
+- ✅ Created linked epics [#3](https://github.com/mnxtr/M_I_OS/issues/3) through
+  [#12](https://github.com/mnxtr/M_I_OS/issues/12) for identity, dashboard, evidence/RAG,
+  production, quality, actions, compliance, reliability, connectors, and maintenance.
+- ✅ Added Vercel and Render deployment definitions; created a Vercel Preview build from the
+  verified web project with only the public Supabase project variables.
 
 ### In progress / verification pending
 
@@ -53,6 +62,8 @@ Use one dated section per work session. Mark only verified outcomes as complete.
 - 🟡 Live-Postgres migration and integration test (the local database service is not running).
 - 🟡 Removal of direct-browser access to the temporary `mios_*` pilot tables after API parity.
 - 🟡 Environment/runbook updates for Vercel, Render, and Supabase Auth redirect configuration.
+- ⛔ The created Vercel URL is currently protected and the connected account could not generate a
+  23-hour share bypass. A team owner must expose/approve that preview before it is pilot-shareable.
 
 ### Environment notes
 
@@ -61,16 +72,15 @@ Use one dated section per work session. Mark only verified outcomes as complete.
   workstation-only path issue.
 - The root disk was full. Only the disposable npm content cache was removed; no project source or
   user data was deleted.
-- Local `.git` metadata is read-only in this project mirror, so the delivery branch and PR must be
-  created through the GitHub API after the verified file set is finalized.
+- Local `.git` metadata is read-only in this project mirror, so the delivery branch, PR, and epics
+  were created through the GitHub API after the verified file set was finalized.
 
 ### Next tasks
 
 1. Run the canonical migration and RLS integration matrix against a live isolated Postgres service.
 2. Add browser automation and component accessibility checks to CI.
-3. Add Render web/worker definitions and finish the Vercel/Supabase deployment runbook.
+3. Finish the Vercel/Supabase redirect and production-promotion runbook.
 4. Remove direct browser access to pilot business tables after FastAPI endpoint parity.
-5. Run final secret/status checks.
-6. Create `codex/mios-pilot-foundation`, publish the commit set, open the immediate PR, and create
-   the linked epics.
-7. Deploy the tested frontend preview and perform the shareable pilot walkthrough.
+5. Have a Vercel team owner expose/approve the protected preview, then perform the external pilot
+   walkthrough.
+6. Begin M1 Trusted Evidence Core after M0 isolation and deployment gates pass.
