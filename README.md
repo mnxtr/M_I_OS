@@ -301,9 +301,14 @@ For full-quality generation and embeddings, configure the provider settings in `
 ```env
 EMBEDDING_PROVIDER=openai
 LLM_PROVIDER=openai
+OPENAI_API_KEY=<server-only project key>
+OPENAI_MODEL=gpt-5.6-terra
 ```
 
-MIOS is also designed to support an offline development mode using deterministic local embeddings and extractive responses when external model keys are not configured.
+The key is read only by FastAPI/Render and must never be placed in a `NEXT_PUBLIC_*` variable or
+browser bundle. MIOS uses the Responses API for generation and is also designed to support an
+offline development mode using deterministic local embeddings and evidence-only extractive responses
+when external model keys are not configured.
 
 ---
 

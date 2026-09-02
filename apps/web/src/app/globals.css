@@ -1259,6 +1259,43 @@ select:disabled {
   color: #ffffff;
 }
 
+.brain-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.brain-metadata span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.brain-warning {
+  border-left: 3px solid var(--warning);
+  padding: 8px 10px;
+  background: #fff9ed;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.brain-warning ul {
+  margin: 4px 0 0;
+  padding-left: 15px;
+}
+
+.brain-next-step {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 .stream-caret {
   display: inline-block;
   width: 6px;

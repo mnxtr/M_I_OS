@@ -45,8 +45,14 @@ flowchart LR
 ## 3. Generation
 
 - System prompt: role-scoped, factory-context-loaded (factory name, active buyer codes), strict citation policy, refusal policy for out-of-corpus questions ("I don't have that in your records" — never hallucinate an audit answer).
-- Answers stream via WebSocket with inline citation chips; every claim links to source span (page highlight for PDFs).
-- **Answer contract**: `{answer_md, citations[], confidence, sql_used?, suggested_followups[]}`.
+- Answers stream through normalized server-sent events (`metadata`, `citation`, `token`, `warning`,
+  `action_draft`, `done`, `error`) with inline citation chips; every supported claim links to a
+  source span (page highlight for PDFs).
+- **Answer contract**: `{answer, citations[], provider, model, trace_id, confidence,
+  evidence_coverage, freshness, limitations[], suggested_actions[], latency_ms}`.
+- OpenAI generation uses the Responses API through a central FastAPI adapter. The current pilot
+  default is `gpt-5.6-terra` with low reasoning and low verbosity; all are environment-configurable.
+  Responses are not stored by the provider by default. No OpenAI credential is exposed to Next.js.
 
 ## 4. Evaluation (build from day 1)
 
@@ -58,7 +64,7 @@ flowchart LR
 
 | Lever | Tactic |
 |---|---|
-| Model routing | Cheap model (e.g., GPT-4o-mini / Claude Haiku / Gemini Flash) for classification+simple lookups; frontier model only for synthesis |
+| Model routing | Cost-balanced model for grounded synthesis; smaller routing/classification model after evaluation proves no quality regression |
 | Cache | Semantic answer cache per tenant (embedding similarity >0.97 → serve cached, mark as such) |
 | Embeddings | Batch + dedupe by content hash; re-embed only changed chunks |
 | OCR | Local Tesseract first pass; expensive DocAI only when confidence < threshold |

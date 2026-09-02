@@ -122,6 +122,12 @@ and evidence boundary match the production architecture.
 expand dashboard API tests, add browser/a11y tests, configure invitation emails, deploy the FastAPI
 service and worker, and publish a protected Vercel preview.
 
+**M1 started (2026-09-03):** the first trusted-answer slice now uses a centralized server-side
+OpenAI Responses API adapter, evidence-only degradation, injection-resistant prompts, trace IDs,
+confidence/coverage metadata, normalized SSE events, and a same-origin chat proxy. Persistence of
+conversation/retrieval traces, source freshness, feedback, action drafts, and golden-set evaluation
+remains in the M1 backlog.
+
 ### M1 — Trusted Evidence Core (4–6 weeks)
 
 **Outcome:** every answer is permission-safe, traceable, and measurable.

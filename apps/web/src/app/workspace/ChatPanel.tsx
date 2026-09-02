@@ -2,7 +2,7 @@
 
 import { FormEvent, RefObject } from "react";
 
-import { Citation, DocumentRecord } from "@/lib/api";
+import { ChatMetadata, Citation, DocumentRecord } from "@/lib/api";
 import { Lang, t } from "@/lib/i18n";
 
 import { WorkspaceView } from "./DashboardOverview";
@@ -11,6 +11,8 @@ export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   citations?: Citation[];
+  metadata?: ChatMetadata;
+  warnings?: string[];
   streaming?: boolean;
 }
 
@@ -124,6 +126,38 @@ export default function ChatPanel({
                       {message.text || (message.streaming ? tr.thinking : "")}
                       {message.streaming && message.text ? <span className="stream-caret" /> : null}
                     </div>
+                    {message.metadata ? (
+                      <div className="brain-metadata" aria-label={tr.answerMetadata}>
+                        <span>
+                          {message.metadata.provider} · {message.metadata.model}
+                        </span>
+                        <span>
+                          {tr.confidence}: {Math.round(message.metadata.confidence * 100)}%
+                        </span>
+                        <span>
+                          {tr.evidenceCoverage}: {Math.round(message.metadata.evidence_coverage * 100)}%
+                        </span>
+                        <span title={message.metadata.trace_id}>
+                          {tr.trace}: {message.metadata.trace_id.slice(0, 8)}
+                        </span>
+                      </div>
+                    ) : null}
+                    {message.warnings && message.warnings.length > 0 ? (
+                      <div className="brain-warning" role="status">
+                        <strong>{tr.limitations}</strong>
+                        <ul>
+                          {message.warnings.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {message.metadata?.suggested_actions.length ? (
+                      <p className="brain-next-step">
+                        <strong>{tr.suggestedAction}:</strong>{" "}
+                        {message.metadata.suggested_actions[0]}
+                      </p>
+                    ) : null}
                     {message.citations && message.citations.length > 0 ? (
                       <div className="citation-list">
                         <p>{tr.sources(message.citations.length)}</p>

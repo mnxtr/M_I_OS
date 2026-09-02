@@ -84,3 +84,36 @@ Use one dated section per work session. Mark only verified outcomes as complete.
 5. Have a Vercel team owner expose/approve the protected preview, then perform the external pilot
    walkthrough.
 6. Begin M1 Trusted Evidence Core after M0 isolation and deployment gates pass.
+
+## 2026-09-03 — M1 Trusted Answer Foundation
+
+### Completed
+
+- ✅ Replaced fragmented OpenAI Chat Completions calls with one server-side Responses API adapter
+  shared by grounded chat, guarded analytics, and compliance generation.
+- ✅ Added environment-controlled model, reasoning effort, verbosity, timeout, and provider-storage
+  settings; selected `gpt-5.6-terra` as the cost/intelligence pilot default.
+- ✅ Hardened MIOS prompts against instructions inside retrieved evidence and retained human approval
+  language for consequential operational actions.
+- ✅ Added the first brain orchestration contract: provider/model, trace ID, confidence, evidence
+  coverage, freshness, limitations, suggested actions, latency, and safe evidence-only fallback.
+- ✅ Normalized chat streaming to `metadata`, `citation`, `warning`, `token`, and `done` events.
+- ✅ Routed frontend chat through authenticated same-origin Next.js endpoints instead of direct reads
+  from the seeded answer table; FastAPI remains the authoritative live path.
+- ✅ Added a clearly labelled deterministic fallback for previews without FastAPI/OpenAI and rendered
+  provenance, confidence, coverage, trace, limitations, next step, and citations in Ask MIOS.
+- ✅ Verified the seeded SSE route and the complete Ask MIOS interaction in the browser, including a
+  Bangla question, Bangla answer, metadata, warning, next step, and citation.
+- ✅ Added focused brain tests; Python lint, strict TypeScript, and all 74 database-independent tests
+  passed. The local `TestClient` integration module still waits for unavailable service state and is
+  left to the clean GitHub runner/live-Postgres gate.
+
+### Pending
+
+- 🟡 Add `OPENAI_API_KEY` only to the Render secret environment and run a live Responses API smoke
+  test; no API key is available in this local task environment.
+- 🟡 Persist conversations, response usage, retrieval evidence, latency/cost, feedback, and audit
+  events through a forward-only migration.
+- 🟡 Validate model quality and cost against the reviewed Bangla/Banglish/English golden set before
+  changing the pilot default or enabling tool calls.
+- 🟡 Add structured `action_draft` generation behind an explicit human approval workflow.

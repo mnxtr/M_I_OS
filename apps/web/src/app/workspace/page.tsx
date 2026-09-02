@@ -135,8 +135,17 @@ export default function WorkspacePage() {
 
     try {
       await askStream(nextQuestion, {
+        onMetadata: (metadata) =>
+          setMessages((current) => updateLastAssistant(current, { metadata })),
         onCitations: (citations) =>
           setMessages((current) => updateLastAssistant(current, { citations })),
+        onWarning: (warning) =>
+          setMessages((current) => {
+            const lastMessage = current[current.length - 1];
+            return updateLastAssistant(current, {
+              warnings: [...(lastMessage?.warnings ?? []), warning],
+            });
+          }),
         onToken: (token) =>
           setMessages((current) => {
             const lastMessage = current[current.length - 1];

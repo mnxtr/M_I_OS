@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     embedding_provider: str = "openai"  # openai | local
     embedding_dim: int = 384
     openai_api_key: str = ""
+    openai_model: str = "gpt-5.6-terra"
+    openai_reasoning_effort: str = "low"
+    openai_verbosity: str = "low"
+    openai_timeout_seconds: float = 30.0
+    openai_store_responses: bool = False
 
     # D-1 decision: OpenAI-primary. Falls back to extractive/local when no key set.
     llm_provider: str = "openai"  # openai | anthropic | none

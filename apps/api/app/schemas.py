@@ -75,3 +75,11 @@ class ChatOut(BaseModel):
     answer: str
     citations: list[Citation]
     provider: str
+    model: str
+    trace_id: str
+    confidence: float = Field(ge=0, le=1)
+    evidence_coverage: float = Field(ge=0, le=1)
+    freshness: str
+    limitations: list[str] = Field(default_factory=list)
+    suggested_actions: list[str] = Field(default_factory=list)
+    latency_ms: int = Field(ge=0)

@@ -28,6 +28,14 @@ services:
           property: connectionString
       - key: OPENAI_API_KEY
         sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.6-terra
+      - key: OPENAI_REASONING_EFFORT
+        value: low
+      - key: OPENAI_VERBOSITY
+        value: low
+      - key: OPENAI_STORE_RESPONSES
+        value: false
 
   - type: worker
     name: mios-worker
@@ -54,6 +62,14 @@ services:
           property: connectionString
       - key: OPENAI_API_KEY
         sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.6-terra
+      - key: OPENAI_REASONING_EFFORT
+        value: low
+      - key: OPENAI_VERBOSITY
+        value: low
+      - key: OPENAI_STORE_RESPONSES
+        value: false
 
   - type: keyvalue
     name: mios-queue

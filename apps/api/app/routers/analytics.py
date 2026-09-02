@@ -12,7 +12,13 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.deps import CurrentUser, DbDep
 from app.models import TableSource, Tenant
-from app.services.llm import ANALYTICS_SYSTEM_PROMPT
+from app.services.llm import (
+    ANALYTICS_SYSTEM_PROMPT,
+    LLMNotConfigured,
+    complete,
+    llm_configured,
+    stream_completion,
+)
 from app.services.plans import METRIC_ANALYTICS, enforce_quota, record_usage
 from app.services.sqlguard import (
     SQLValidationError,
@@ -90,36 +96,13 @@ def _build_schema_context(db: Session, tenant_id: uuid.UUID, sources: list) -> s
 
 
 def _call_llm_sync(system: str, prompt: str) -> str:
-    settings = get_settings()
-    if settings.llm_provider == "openai" and settings.openai_api_key:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=settings.openai_api_key)
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.0,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": prompt},
-            ],
-        )
-        return completion.choices[0].message.content or ""
-    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=800,
-            temperature=0.0,
-            system=system,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return "".join(block.text for block in message.content if block.type == "text")
-    raise HTTPException(
-        status.HTTP_503_SERVICE_UNAVAILABLE,
-        "Analytics requires an LLM provider. Set LLM_PROVIDER and its API key.",
-    )
+    try:
+        return complete(system, prompt, max_tokens=800)
+    except LLMNotConfigured as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Analytics requires an LLM provider. Set LLM_PROVIDER and its API key.",
+        ) from exc
 
 
 def generate_sql(db: Session, tenant_id: uuid.UUID, question: str, sources: list) -> str:
@@ -154,43 +137,18 @@ def execute_bounded(db: Session, sql: str) -> list[dict]:
 
 async def synthesize_stream(question: str, sql: str, rows: list[dict]) -> AsyncIterator[str]:
     """Stream a natural-language synthesis of query results."""
-    settings = get_settings()
     results_text = json.dumps(rows[:50], ensure_ascii=False, default=str)
     user_content = f"Question: {question}\nSQL executed:\n{sql}\n\nResults JSON:\n{results_text}"
 
-    if settings.llm_provider == "openai" and settings.openai_api_key:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=settings.openai_api_key)
-        stream = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.1,
-            stream=True,
-            messages=[
-                {"role": "system", "content": ANALYTICS_SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-        )
-        for event in stream:
-            delta = event.choices[0].delta.content if event.choices else None
-            if delta:
-                yield delta
-        return
-
-    if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        with client.messages.stream(
-            model="claude-sonnet-4-5",
-            max_tokens=1200,
-            temperature=0.1,
-            system=ANALYTICS_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_content}],
-        ) as stream:
-            for token in stream.text_stream:
+    if llm_configured():
+        try:
+            async for token in stream_completion(
+                ANALYTICS_SYSTEM_PROMPT, user_content, max_tokens=1200
+            ):
                 yield token
-        return
+            return
+        except Exception:  # noqa: BLE001 — bounded result preview remains available
+            pass
 
     summary = f"Query executed ({len(rows)} rows).\n" + json.dumps(
         rows[:20], ensure_ascii=False, indent=1, default=str

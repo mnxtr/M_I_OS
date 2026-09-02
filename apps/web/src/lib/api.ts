@@ -1,21 +1,10 @@
 import type { User } from "@supabase/supabase-js";
 
+import type { ChatMetadata, ChatResponse, Citation } from "@/lib/chat";
 import { getSupabase } from "@/lib/supabase";
 import type { DashboardFilters, DashboardSnapshot } from "@/lib/dashboard";
 
-export interface Citation {
-  document_id: string;
-  document_name: string;
-  page: number;
-  chunk_index: number;
-  snippet: string;
-}
-
-export interface ChatResponse {
-  answer: string;
-  citations: Citation[];
-  provider: string;
-}
+export type { ChatMetadata, ChatResponse, Citation } from "@/lib/chat";
 
 export interface DocumentRecord {
   id: string;
@@ -87,13 +76,6 @@ export interface PlanInfo {
   code: string;
   name: string;
   price_usd: number;
-}
-
-interface DemoAnswerRow {
-  id: string;
-  keywords: string[];
-  answer: string;
-  citations: Citation[];
 }
 
 interface AnalyticsAnswerRow {
@@ -234,23 +216,20 @@ export async function uploadDocument(file: File): Promise<void> {
 }
 
 export async function ask(question: string): Promise<ChatResponse> {
-  await requireUser();
-  const { data, error } = await getSupabase()
-    .from("mios_demo_answers")
-    .select("id, keywords, answer, citations");
-  if (error) throw new Error(error.message);
-
-  const selected = pickAnswer(question, (data ?? []) as DemoAnswerRow[]);
-  await incrementUsage("chat_queries");
-  return {
-    answer: selected.answer,
-    citations: selected.citations,
-    provider: "supabase-pilot",
-  };
+  const response = await fetch("/api/mios/chat", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, top_k: 8 }),
+  });
+  if (!response.ok) throw new Error(await responseError(response));
+  return response.json() as Promise<ChatResponse>;
 }
 
 export interface StreamHandlers {
+  onMetadata?: (metadata: ChatMetadata) => void;
   onCitations?: (citations: Citation[]) => void;
+  onWarning?: (warning: string) => void;
   onToken: (token: string) => void;
 }
 
@@ -258,11 +237,64 @@ export async function askStream(
   question: string,
   handlers: StreamHandlers,
 ): Promise<void> {
-  const response = await ask(question);
-  handlers.onCitations?.(response.citations);
-  for (const token of response.answer.match(/\S+\s*/g) ?? []) {
-    handlers.onToken(token);
-    await delay(12);
+  const response = await fetch("/api/mios/chat/stream", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, top_k: 8 }),
+  });
+  if (!response.ok) throw new Error(await responseError(response));
+  if (!response.body) throw new Error("MIOS returned an empty response stream.");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const citations: Citation[] = [];
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() || "";
+    blocks.forEach((block) => handleStreamBlock(block, handlers, citations));
+    if (done) break;
+  }
+  if (buffer.trim()) handleStreamBlock(buffer, handlers, citations);
+}
+
+function handleStreamBlock(
+  block: string,
+  handlers: StreamHandlers,
+  citations: Citation[],
+): void {
+  const data = block
+    .split("\n")
+    .find((line) => line.startsWith("data:"))
+    ?.slice(5)
+    .trim();
+  if (!data) return;
+  const event = JSON.parse(data) as Record<string, unknown>;
+  if (event.type === "metadata") {
+    handlers.onMetadata?.(event as unknown as ChatMetadata);
+  } else if (event.type === "citation" && event.citation) {
+    citations.push(event.citation as Citation);
+    handlers.onCitations?.([...citations]);
+  } else if (event.type === "warning" && typeof event.message === "string") {
+    handlers.onWarning?.(event.message);
+  } else if (event.type === "token" && typeof event.value === "string") {
+    handlers.onToken(event.value);
+  } else if (event.type === "error") {
+    throw new Error(typeof event.message === "string" ? event.message : "MIOS generation failed.");
+  }
+}
+
+async function responseError(response: Response): Promise<string> {
+  const body = await response.text();
+  try {
+    const parsed = JSON.parse(body) as { detail?: string };
+    return parsed.detail || `MIOS request failed (${response.status}).`;
+  } catch {
+    return body || `MIOS request failed (${response.status}).`;
   }
 }
 
