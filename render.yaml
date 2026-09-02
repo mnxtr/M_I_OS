@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: mios-api
+    runtime: python
+    region: singapore
+    rootDir: apps/api
+    buildCommand: pip install -e ".[worker]"
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: AUTO_CREATE_SCHEMA
+        value: false
+      - key: USE_CELERY
+        value: true
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_AUDIENCE
+        value: authenticated
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: mios-queue
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: worker
+    name: mios-worker
+    runtime: python
+    region: singapore
+    rootDir: apps/api
+    buildCommand: pip install -e ".[worker]"
+    startCommand: celery -A app.worker.celery_app worker --loglevel=info
+    envVars:
+      - key: AUTO_CREATE_SCHEMA
+        value: false
+      - key: USE_CELERY
+        value: true
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: mios-queue
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: keyvalue
+    name: mios-queue
+    region: singapore
+    ipAllowList: []

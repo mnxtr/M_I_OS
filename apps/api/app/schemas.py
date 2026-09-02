@@ -21,6 +21,15 @@ class TokenOut(BaseModel):
     token_type: str = "bearer"
 
 
+class MembershipOut(BaseModel):
+    factory_id: uuid.UUID
+    factory_name: str
+    role: str
+    capabilities: list[str]
+    timezone: str
+    currency: str
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,6 +37,11 @@ class UserOut(BaseModel):
     email: str
     full_name: str
     role: str
+    memberships: list[MembershipOut] = Field(default_factory=list)
+    active_factory_id: uuid.UUID | None = None
+    capabilities: list[str] = Field(default_factory=list)
+    language: str = "en"
+    onboarding_state: str = "ready"
 
 
 class DocumentOut(BaseModel):

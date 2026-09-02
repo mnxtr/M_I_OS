@@ -202,6 +202,7 @@ Tenant isolation is treated as a core architectural requirement rather than a UI
 
 ```text
 M_I_OS/
+├── PLAN.md                           # Canonical phased product and delivery plan
 ├── apps/
 │   ├── api/                         # FastAPI backend and intelligence services
 │   └── web/                         # Next.js frontend
@@ -215,11 +216,16 @@ M_I_OS/
 │   ├── 03-RAG-DESIGN.md             # Retrieval and ingestion design
 │   ├── 04-DEVELOPMENT-PLAN.md       # Development roadmap
 │   ├── 05-BANGLADESH-GTM.md         # Market and go-to-market strategy
+│   ├── 06-FRONTEND-EXPERIENCE-PLAN.md # Frontend UX and implementation roadmap
+│   ├── 07-PILOT-BACKEND-AND-PREVIEW.md # Supabase pilot and preview runbook
+│   ├── WORKLOG.md                    # Dated implementation and verification log
 │   └── adr/                          # Architecture decision records
 │
 ├── evals/                            # Retrieval evaluation datasets and runners
 ├── infra/
 │   └── docker-compose.yml            # Local infrastructure
+├── supabase/
+│   └── migrations/                    # Hosted pilot schema, seed data, and RLS
 │
 └── README.md
 ```
@@ -231,7 +237,7 @@ M_I_OS/
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 20+
+- Node.js 22+
 - Docker + Docker Compose
 - Git
 
@@ -272,6 +278,7 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd apps/web
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
@@ -280,6 +287,12 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+The shareable pilot frontend uses Supabase Auth, private object storage, and
+per-user seed provisioning. Add the hosted project URL and publishable key to
+`apps/web/.env.local`; never expose a service-role key in the browser. See
+[`docs/07-PILOT-BACKEND-AND-PREVIEW.md`](docs/07-PILOT-BACKEND-AND-PREVIEW.md)
+for the full pilot runbook.
 
 ### 5. Configure AI providers
 
