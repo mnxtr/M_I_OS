@@ -9,6 +9,7 @@ venv/
 dist/
 build/
 .next/
+*.tsbuildinfo
 *.egg-info/
 
 # Env & secrets
