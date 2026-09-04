@@ -22,6 +22,10 @@ build/
 .vscode/
 *.swp
 
+# Agent tooling (machine-local)
+.opencode/
+.claude/
+
 # OS
 .DS_Store
 
