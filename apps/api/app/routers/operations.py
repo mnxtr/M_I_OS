@@ -40,6 +40,10 @@ class GapRequest(BaseModel):
 def analyze_gaps(payload: GapRequest) -> dict:
     points, cycles = [], []
     buckets = defaultdict(list)
+    line_totals = defaultdict(
+        lambda: {"target": 0, "actual": 0, "gap": 0, "observed": 0, "missing": 0}
+    )
+    daily_totals = defaultdict(lambda: {"target": 0, "actual": 0, "gap": 0, "observed": 0})
     active = None
     target_sum = actual_sum = gap_sum = observed = 0
     for row in sorted(payload.observations, key=lambda x: (x.line, x.start)):
@@ -54,6 +58,17 @@ def analyze_gaps(payload: GapRequest) -> dict:
             gap_sum += gap
             local = row.start.astimezone(DHAKA)
             buckets[(row.line, local.strftime("%H:%M"))].append((local.date(), gap > 0))
+            line_totals[row.line]["target"] += row.target
+            line_totals[row.line]["actual"] += row.actual
+            line_totals[row.line]["gap"] += gap
+            line_totals[row.line]["observed"] += 1
+            day = local.date().isoformat()
+            daily_totals[day]["target"] += row.target
+            daily_totals[day]["actual"] += row.actual
+            daily_totals[day]["gap"] += gap
+            daily_totals[day]["observed"] += 1
+        else:
+            line_totals[row.line]["missing"] += row.actual is None
         if gap is not None and gap > 0:
             if active and active["line"] == row.line and active["end"] == row.start:
                 active["end"] = end
@@ -84,11 +99,81 @@ def analyze_gaps(payload: GapRequest) -> dict:
                     "gap_frequency": gap_days / days,
                 }
             )
+    by_line = []
+    for line, totals in line_totals.items():
+        target = totals["target"]
+        actual = totals["actual"]
+        by_line.append(
+            {
+                "line": line,
+                "target_units": target,
+                "actual_units": actual,
+                "gap_units": totals["gap"],
+                "attainment_percent": round(actual * 100 / target, 1) if target else None,
+                "observed_intervals": totals["observed"],
+                "missing_actual_intervals": totals["missing"],
+            }
+        )
+    by_line.sort(key=lambda item: (-item["gap_units"], item["line"]))
+
+    daily = []
+    for date, totals in sorted(daily_totals.items()):
+        target = totals["target"]
+        actual = totals["actual"]
+        daily.append(
+            {
+                "date": date,
+                "target_units": target,
+                "actual_units": actual,
+                "gap_units": totals["gap"],
+                "attainment_percent": round(actual * 100 / target, 1) if target else None,
+                "observed_intervals": totals["observed"],
+            }
+        )
+
+    priority_actions = []
+    for summary in by_line[:5]:
+        if summary["gap_units"] > 0:
+            priority_actions.append(
+                {
+                    "line": summary["line"],
+                    "kind": "shortfall",
+                    "message": (
+                        f"Review {summary['line']}: "
+                        f"{summary['gap_units']} pieces of gross shortfall."
+                    ),
+                }
+            )
+        if summary["missing_actual_intervals"] > 0:
+            priority_actions.append(
+                {
+                    "line": summary["line"],
+                    "kind": "data",
+                    "message": (
+                        f"Complete {summary['missing_actual_intervals']} missing actual-output "
+                        f"record(s) for {summary['line']}."
+                    ),
+                }
+            )
+    if not priority_actions:
+        priority_actions.append(
+            {
+                "line": None,
+                "kind": "monitor",
+                "message": (
+                    "No shortfall was found in the submitted intervals. "
+                    "Keep collecting a full shift "
+                    "before treating this as a stable result."
+                ),
+            }
+        )
     return {
-        "basis": "submitted observations; pieces; not saved",
+        "basis": "submitted observations; pieces; not saved as production truth",
+        "submitted_intervals": len(payload.observations),
         "observed_intervals": observed,
         "missing_actual_intervals": sum(r.actual is None for r in payload.observations),
         "unscheduled_intervals": sum(r.target == 0 for r in payload.observations),
+        "data_coverage_percent": round(observed * 100 / len(payload.observations), 1),
         "target_units": target_sum,
         "actual_units": actual_sum,
         "gap_units": gap_sum,
@@ -96,6 +181,9 @@ def analyze_gaps(payload: GapRequest) -> dict:
         "cycles": cycles,
         "recurring_slots": recurring,
         "points": points,
+        "by_line": by_line,
+        "daily": daily,
+        "priority_actions": priority_actions[:6],
     }
 
 

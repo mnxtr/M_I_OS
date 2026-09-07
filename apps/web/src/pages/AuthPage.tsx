@@ -47,7 +47,7 @@ export default function AuthPage() {
   return (
     <main className="auth-shell">
       <section className="auth-story">
-        <a className="brand" href="#/"><span className="brand-mark">L</span>Lineora<span className="brand-period">.</span></a>
+        <a className="brand" href="#/"><span className="brand-mark">L</span>Linora<span className="brand-period">.</span></a>
         <div className="auth-story-copy"><span className="eyebrow">{lang === "bn" ? "কারখানার ইন্টেলিজেন্স, সবার জন্য" : "A CLEARER VIEW OF YOUR FACTORY"}</span><h1>{lang === "bn" ? "কম অনুমান। আরও স্পষ্ট সিদ্ধান্ত।" : <>Less guesswork.<br/>More clarity.</>}</h1><p>{lang === "bn" ? "উৎপাদনের ঘাটতি, শিফটের তথ্য ও কারখানার জ্ঞান এক জায়গায় আনুন।" : "Bring your production gaps, shift records and factory knowledge into one focused workspace."}</p></div>
         <div className="auth-feature-list">{[
           {icon:"overview" as const, title:lang === "bn" ? "ঘাটতি দেখুন" : "Spot the shortfall", text:lang === "bn" ? "লক্ষ্য ও প্রকৃত উৎপাদন তুলনা করুন।" : "Compare targets with actual output."},

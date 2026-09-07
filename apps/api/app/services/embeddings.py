@@ -20,14 +20,9 @@ def _hash_embed(text: str, dim: int) -> list[float]:
 
 
 def _openai_embed(texts: list[str]) -> list[list[float]]:
-    from openai import OpenAI
+    from app.services.openai_compat import embed
 
-    settings = get_settings()
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.embeddings.create(
-        model="text-embedding-3-small", input=texts, dimensions=settings.embedding_dim
-    )
-    return [item.embedding for item in response.data]
+    return embed(texts)
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:

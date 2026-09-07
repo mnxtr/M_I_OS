@@ -1,6 +1,6 @@
-# Lineora frontend refresh and UX plan
+# Linora frontend refresh and UX plan
 
-This iteration improves the existing React/Vite application. It retains the Lineora name,
+This iteration improves the existing React/Vite application. It uses the Linora name,
 operations-first direction and existing API contracts. It does not add a live factory feed,
 persistent production storage or new authentication authority.
 

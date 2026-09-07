@@ -1,4 +1,4 @@
-# Lineora audit and milestone plan
+# Linora audit and milestone plan
 
 Reviewed 2026-09-07. This report supersedes earlier roadmap descriptions where they conflict.
 Scope: repository inspection, read-only connected-cloud inspection, official API documentation,
@@ -40,7 +40,7 @@ Effort ranges are planning estimates for a small experienced team, not delivery 
 | Milestone | Estimated effort | Scope | Acceptance gate |
 |---|---|---|---|
 | M0 — Baseline audit | Completed | Code/cloud inventory, current contracts, three layouts, market hypotheses | Findings and unverified assumptions recorded |
-| M1 — Evidence workbench | Implemented locally | Lineora UI, knowledge dashboard/inbox, deterministic gap analysis, Supabase/Grok adapters | Unit/component tests and Vite build pass; publish code |
+| M1 — Evidence workbench | Implemented locally | Linora UI, knowledge dashboard/inbox, deterministic gap analysis, Supabase/Grok adapters | Unit/component tests and Vite build pass; publish code |
 | M2 — Secure facility pilot | 1–2 weeks after access | Align organization/tenant/factory identities; restricted DB role; Supabase membership administration; private file storage; facility activation and durable line/shift records | Two-tenant negative tests against Postgres; revoked users denied; backup restore; one factory baseline imported twice without duplication |
 | M3 — Operational action loop | 2–3 weeks | Persistent hourly records, CSV column mapping, target versions, downtime reasons, gap assignment/closure, server activity events | Corrected inputs reproduce metrics; missing versus zero survives import; actions have owner, due date and evidence |
 | M4 — Knowledge intelligence | 1–2 weeks | Durable parsing queue, source versioning, access-controlled retrieval, bilingual evaluation, Grok usage budgets | Failed jobs retry safely; deletion removes retrieval access; evaluated citations supported by source; no cross-factory excerpts |

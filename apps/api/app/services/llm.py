@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 
 from app.config import get_settings
 
-SYSTEM_PROMPT = """You are Lineora, an AI assistant embedded in a manufacturing factory's \
+SYSTEM_PROMPT = """You are Linora, an AI assistant embedded in a manufacturing factory's \
 knowledge system. Answer strictly using the provided context excerpts from the factory's \
 own documents. Always cite sources inline using [doc:FILENAME p.PAGE] markers. \
 If the context does not contain the answer, say you don't have it in their records — \
@@ -46,23 +46,10 @@ async def stream_completion(
         return
 
     if settings.llm_provider == "openai" and settings.openai_api_key:
-        from openai import OpenAI
+        from app.services.openai_compat import stream
 
-        client = OpenAI(api_key=settings.openai_api_key)
-        stream = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.1,
-            max_tokens=max_tokens,
-            stream=True,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
-        for event in stream:
-            delta = event.choices[0].delta.content if event.choices else None
-            if delta:
-                yield delta
+        async for token in stream(system_prompt, user_prompt, max_tokens):
+            yield token
         return
 
     if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
@@ -94,19 +81,9 @@ def complete(system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> st
 
         return grok_complete(system_prompt, user_prompt, max_tokens)
     if settings.llm_provider == "openai" and settings.openai_api_key:
-        from openai import OpenAI
+        from app.services.openai_compat import complete as openai_complete
 
-        client = OpenAI(api_key=settings.openai_api_key)
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.1,
-            max_tokens=max_tokens,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
-        return completion.choices[0].message.content or ""
+        return openai_complete(system_prompt, user_prompt, max_tokens)
     if settings.llm_provider == "anthropic" and settings.anthropic_api_key:
         import anthropic
 
@@ -120,6 +97,18 @@ def complete(system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> st
         )
         return "".join(block.text for block in message.content if block.type == "text")
     raise LLMNotConfigured()
+
+
+def assistant_status() -> dict[str, str | bool]:
+    """Safe readiness signal for the authenticated workspace UI."""
+    settings = get_settings()
+    configured = llm_configured()
+    provider = settings.llm_provider if configured else "retrieval"
+    return {
+        "provider": provider,
+        "ready": configured,
+        "mode": "grounded-generation" if configured else "source-excerpts",
+    }
 
 
 def generate_answer(question: str, contexts: list[dict]) -> tuple[str, str]:

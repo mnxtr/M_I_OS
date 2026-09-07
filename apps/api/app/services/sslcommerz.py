@@ -30,7 +30,7 @@ class SSLCommerzSandbox:
             "ipn_url": ipn_url,
             "shipping_method": "NO",
             "num_of_item": "1",
-            "product_name": "Lineora sandbox subscription",
+            "product_name": "Linora sandbox subscription",
             "product_category": "Software",
             "product_profile": "non-physical-goods",
             **customer,

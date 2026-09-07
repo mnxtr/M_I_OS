@@ -114,7 +114,7 @@ def return_page(val_id: str = Form(default="", max_length=100)):
     # Notification acknowledgement only. The authenticated /validate path is authoritative.
     # Never echo untrusted payment fields into HTML or promote a subscription here.
     return (
-        "<h1>Lineora sandbox checkout returned</h1>"
+        "<h1>Linora sandbox checkout returned</h1>"
         "<p>Return to your sandbox client and verify the transaction using the validation ID. "
         "No subscription has been activated.</p>"
     )

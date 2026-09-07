@@ -17,6 +17,12 @@ export interface ChatResponse {
   provider: string;
 }
 
+export interface ChatStatus {
+  provider: string;
+  ready: boolean;
+  mode: string;
+}
+
 export interface DocumentRecord {
   id: string;
   filename: string;
@@ -111,6 +117,11 @@ export async function ask(question: string): Promise<ChatResponse> {
     body: JSON.stringify({ question }),
   });
   return handle<ChatResponse>(res);
+}
+
+export async function getChatStatus(): Promise<ChatStatus> {
+  const res = await fetch(`${API_URL}/v1/chat/status`, { headers: await authHeaders() });
+  return handle<ChatStatus>(res);
 }
 
 export interface StreamHandlers {

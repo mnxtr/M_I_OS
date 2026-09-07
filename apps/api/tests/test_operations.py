@@ -68,6 +68,31 @@ def test_no_scheduled_observations_yields_unknown_attainment():
     assert result["unscheduled_intervals"] == 1
 
 
+def test_line_daily_and_priority_summaries_are_derived_from_submitted_records():
+    result = analyze_gaps(
+        GapRequest(
+            observations=[
+                observation(day=1, actual=40, line="Cutting"),
+                observation(day=2, actual=85, line="Cutting"),
+                observation(day=1, actual=None, line="Sewing"),
+            ]
+        )
+    )
+    assert result["submitted_intervals"] == 3
+    assert result["data_coverage_percent"] == 66.7
+    assert result["by_line"][0] == {
+        "line": "Cutting",
+        "target_units": 200,
+        "actual_units": 125,
+        "gap_units": 75,
+        "attainment_percent": 62.5,
+        "observed_intervals": 2,
+        "missing_actual_intervals": 0,
+    }
+    assert result["daily"][0]["gap_units"] == 60
+    assert {action["kind"] for action in result["priority_actions"]} == {"shortfall", "data"}
+
+
 @pytest.mark.parametrize(
     "rows",
     [

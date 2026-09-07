@@ -1,4 +1,4 @@
-# Lineora — Manufacturing intelligence
+# Linora — Manufacturing intelligence
 
 **See the gap. Keep production moving.** Formerly MIOS; repository and API identifiers remain compatible.
 
@@ -17,6 +17,7 @@ below include roadmap items; use the following documents as the current release 
 - [Code contracts, Grok behavior and deployment runbook](docs/09-LINEORA-ENGINEERING.md)
 - [Frontend refresh and prioritized UX plan](docs/10-LINEORA-FRONTEND-PLAN.md)
 - [Production draft implementation and activation](docs/11-PRODUCTION-DRAFTS.md)
+- [Codebase context packs for the knowledge inbox](docs/12-CODEBASE-CONTEXT.md)
 
 <p align="center">
   <strong>Turn factory data into decisions.</strong>
@@ -86,6 +87,14 @@ Traditional software often forces factories to replace or restructure these syst
 ```
 
 The goal is not another chatbot. The goal is an **operational intelligence system** that can connect an answer to the underlying factory evidence.
+
+### AI provider setup
+
+Linora works without a model key by returning source-grounded excerpts from the knowledge inbox. For generated, cited answers, set either `LLM_PROVIDER=openai` with `OPENAI_API_KEY`, or `LLM_PROVIDER=grok` with `XAI_API_KEY`, in the API service's server-side environment. `OPENAI_MODEL`, `OPENAI_EMBEDDING_MODEL`, and `XAI_MODEL` are configurable; the checked-in `.env.example` contains safe defaults. Never expose either key through `VITE_*` variables or browser code.
+
+### Codebase intelligence
+
+[Repomix](https://github.com/yamadashy/repomix) is the open-source way to turn this repository into an AI-friendly context pack. The resulting Markdown can be uploaded through Knowledge Inbox, so the existing tenant-scoped retrieval, citations, and assistant flow can answer questions about the Manufacturing OS source without adding credentials to the pack.
 
 ---
 

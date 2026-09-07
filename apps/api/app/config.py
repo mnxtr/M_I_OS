@@ -15,12 +15,14 @@ class Settings(BaseSettings):
     embedding_provider: str = "openai"  # openai | local
     embedding_dim: int = 384
     openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
 
     # D-1 decision: OpenAI-primary. Falls back to extractive/local when no key set.
     llm_provider: str = "openai"  # openai | anthropic | grok | none
     anthropic_api_key: str = ""
     xai_api_key: str = ""
-    xai_model: str = ""  # Select an available Grok model in the xAI console.
+    xai_model: str = "grok-4.6"
     auth_provider: str = "legacy"  # legacy | supabase; never auto-fallback between them
     supabase_url: str = ""
     supabase_publishable_key: str = ""

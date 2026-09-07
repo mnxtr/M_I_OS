@@ -5,10 +5,12 @@ import OperationsDashboard from "@/components/OperationsDashboard";
 import LangToggle from "@/components/LangToggle";
 import {
   askStream,
+  ChatStatus,
   Citation,
   DocumentRecord,
   fetchDocuments,
   fetchUsage,
+  getChatStatus,
   listTables,
   QueryResult,
   runQuery,
@@ -51,6 +53,7 @@ export default function WorkspacePage() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [tab, setTab] = useState<Tab>("chat");
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [chatStatus, setChatStatus] = useState<ChatStatus | null>(null);
   const [view, setView] = useState<View>("operations");
   const [visited, setVisited] = useState<Set<View>>(() => new Set(["operations"]));
   const [authenticated, setAuthenticated] = useState(false);
@@ -80,8 +83,8 @@ export default function WorkspacePage() {
     if (!authenticated || !visited.has("assistant")) return;
     let active = true;
     setResourceState("loading");
-    void Promise.all([fetchDocuments(), listTables(), fetchUsage()]).then(([docs, tables, usage]) => {
-      if (active) { setDocuments(docs); setTables(tables); setUsage(usage); setResourceState("ready"); }
+    void Promise.all([fetchDocuments(), listTables(), fetchUsage(), getChatStatus()]).then(([docs, tables, usage, status]) => {
+      if (active) { setDocuments(docs); setTables(tables); setUsage(usage); setChatStatus(status); setResourceState("ready"); }
     }).catch(() => { if (active) setResourceState("error"); });
     return () => { active = false; };
   }, [authenticated, visited.has("assistant")]);
@@ -89,8 +92,8 @@ export default function WorkspacePage() {
   async function refreshDocuments() {
     setResourceState("loading");
     try {
-      const [docs, tables, usage] = await Promise.all([fetchDocuments(), listTables(), fetchUsage()]);
-      setDocuments(docs); setTables(tables); setUsage(usage); setResourceState("ready");
+      const [docs, tables, usage, status] = await Promise.all([fetchDocuments(), listTables(), fetchUsage(), getChatStatus()]);
+      setDocuments(docs); setTables(tables); setUsage(usage); setChatStatus(status); setResourceState("ready");
     } catch { setResourceState("error"); }
   }
 
@@ -177,7 +180,7 @@ export default function WorkspacePage() {
     <div className="app-shell">
       <a className="skip-link" href="#workspace-content" onClick={e => { e.preventDefault(); document.getElementById("workspace-content")?.focus(); }}>Skip to workspace</a>
       <aside className="sidebar">
-        <a className="brand" href="#/workspace" onClick={() => navigate("operations")}><span className="brand-mark">L</span>Lineora<span className="brand-period">.</span></a>
+        <a className="brand" href="#/workspace" onClick={() => navigate("operations")}><span className="brand-mark">L</span>Linora<span className="brand-period">.</span></a>
         <p className="sidebar-label">{lang === "bn" ? "আপনার ওয়ার্কস্পেস" : "YOUR WORKSPACE"}</p>
         <nav className="workspace-nav" aria-label="Workspace navigation">
           {navigation.map(item => <button key={item.id} aria-current={view === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.name}</span></button>)}
@@ -272,6 +275,7 @@ export default function WorkspacePage() {
                 {tr.complianceCopilot}
               </button>
             </div>
+            {tab === "chat" && chatStatus && <span className={`assistant-status ${chatStatus.ready ? "assistant-ready" : "assistant-fallback"}`} title={chatStatus.ready ? `Grounded answers use ${chatStatus.provider}.` : "Answers use retrieved source excerpts until an AI provider is configured."}><span className="status-dot"/>{chatStatus.ready ? `${chatStatus.provider} connected` : "Source-grounded mode"}</span>}
             {tab === "chat" && (
               <button className="btn btn-ghost" onClick={() => setShowAnalytics((v) => !v)}>
                 {showAnalytics ? tr.hideAnalytics : tr.analyticsWithCount(tables.length)}

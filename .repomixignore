@@ -1,0 +1,13 @@
+# Keep credentials, generated build artifacts, and local data out of AI context packs.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+node_modules/
+dist/
+coverage/
+__pycache__/
+*.pyc
+storage/
+.pytest_cache/

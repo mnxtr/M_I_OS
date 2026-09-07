@@ -1,7 +1,7 @@
 export type Lang = "en" | "bn";
 
 const en = {
-  appName: "Lineora",
+  appName: "Linora",
   tagline: "See the gap. Keep production moving.",
   signIn: "Sign in",
   registerFactory: "Register factory",
@@ -11,7 +11,7 @@ const en = {
   password: "Password (min 8 chars)",
   pleaseWait: "Please wait…",
   createAccount: "Create account",
-  workspace: "Lineora Workspace",
+  workspace: "Linora Workspace",
   signOut: "Sign out",
   knowledgeBase: "Knowledge Base",
   uploadDoc: "Upload document (PDF/TXT/Excel)",

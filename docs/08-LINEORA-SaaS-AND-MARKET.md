@@ -1,4 +1,4 @@
-# Lineora: operations-first SaaS and market entry
+# Linora: operations-first SaaS and market entry
 
 Planning assumptions: the requested belts mean **Gazipur** and **Savar**, Bangladesh; “IMG” is
 interpreted as **RMG**; “Bicar” as **bKash**; “SSL payment” as **SSLCOMMERZ**. Confirm these in
@@ -15,7 +15,7 @@ Sources: [Gazipur directory](https://mappedinbangladesh.org/search?district=Gazi
 
 **Recommendation, as an inference:** start Gazipur outreach because it offers a substantial
 prospect list, with a Savar pilot in parallel if local relationships reduce acquisition and
-support effort. The directory does not establish that either belt needs Lineora more. Rank
+support effort. The directory does not establish that either belt needs Linora more. Rank
 actual factories by pain, accessible decision-maker, usable records, budget and willingness to
 run a paid pilot. A strong Savar sponsor is more valuable than a larger unqualified list.
 

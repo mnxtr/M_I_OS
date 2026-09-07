@@ -1,6 +1,6 @@
-# Lineora brand and three dashboard layouts
+# Linora brand and three dashboard layouts
 
-Working name: **Lineora**. Tagline: **See the gap. Keep production moving.**
+Brand: **Linora**. Tagline: **See the gap. Keep production moving.**
 The name combines production-line recognition with a short, product-like sound. It is a creative
 proposal; trademark, domain and language checks have not been performed. Avoid claiming market
 popularity or name availability.

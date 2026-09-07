@@ -1,4 +1,4 @@
-# Lineora engineering contracts and deployment runbook
+# Linora engineering contracts and deployment runbook
 
 Release reviewed 2026-09-07. “Implemented” below means repository code and stated automated
 tests; it does not mean a verified cloud deployment. No xAI, merchant or database secrets were
@@ -219,7 +219,7 @@ customer workload/latency. Those are explicit release gates, not covered by mock
 
 ## Production implementation prompt for the next milestone
 
-Implement M2 for Lineora in mnxtr/M_I_OS. Preserve current operational metric contracts. First
+Implement M2 for Linora in mnxtr/M_I_OS. Preserve current operational metric contracts. First
 inspect migrations, connected schema, grants and membership policies. Propose and implement an
 additive mapping between organization, tenant and facility; do not assume IDs are interchangeable.
 Use verified Supabase identity, server-managed roles and a restricted Postgres runtime role.

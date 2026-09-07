@@ -61,7 +61,7 @@ def _init_schema() -> None:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Lineora API", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Linora API", version="0.3.0", lifespan=lifespan)
     if get_settings().cors_origins:
         app.add_middleware(
             CORSMiddleware,

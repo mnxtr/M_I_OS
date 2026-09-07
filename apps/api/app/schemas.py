@@ -61,3 +61,9 @@ class ChatOut(BaseModel):
     answer: str
     citations: list[Citation]
     provider: str
+
+
+class ChatStatus(BaseModel):
+    provider: str
+    ready: bool
+    mode: str

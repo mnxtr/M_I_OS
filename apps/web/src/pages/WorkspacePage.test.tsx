@@ -3,11 +3,11 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import WorkspacePage from "./WorkspacePage";
-import { fetchDocuments, listTables, fetchUsage } from "@/lib/api";
+import { fetchDocuments, getChatStatus, listTables, fetchUsage } from "@/lib/api";
 
 vi.mock("@/lib/supabase", () => ({ getAccessToken: vi.fn().mockResolvedValue("session"), signOut: vi.fn() }));
 vi.mock("@/lib/api", () => ({
-  API_URL: "https://example.test", fetchDocuments: vi.fn(), listTables: vi.fn(), fetchUsage: vi.fn(),
+  API_URL: "https://example.test", fetchDocuments: vi.fn(), getChatStatus: vi.fn(), listTables: vi.fn(), fetchUsage: vi.fn(),
   askStream: vi.fn(), runQuery: vi.fn(), uploadDocument: vi.fn(),
 }));
 vi.mock("@/components/KnowledgeInbox", () => ({ default: () => <h2>Test knowledge inbox</h2> }));
@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.mocked(fetchDocuments).mockResolvedValue([]);
   vi.mocked(listTables).mockResolvedValue([]);
   vi.mocked(fetchUsage).mockResolvedValue({plan:{name:"Pilot"},usage:{},limits:{}} as never);
+  vi.mocked(getChatStatus).mockResolvedValue({provider:"retrieval", ready:false, mode:"source-excerpts"});
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 

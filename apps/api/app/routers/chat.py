@@ -6,8 +6,8 @@ from fastapi.responses import StreamingResponse
 
 from app.deps import CurrentUser, DbDep
 from app.models import Tenant
-from app.schemas import ChatIn, ChatOut, Citation
-from app.services.llm import generate_answer, stream_answer
+from app.schemas import ChatIn, ChatOut, ChatStatus, Citation
+from app.services.llm import assistant_status, generate_answer, stream_answer
 from app.services.plans import METRIC_CHAT, enforce_quota, record_usage
 from app.services.query_understanding import expand_query
 from app.services.retrieval import hybrid_search
@@ -20,6 +20,12 @@ def _meter_chat(db, user: CurrentUser) -> None:
     plan = tenant.plan if tenant else "trial"
     enforce_quota(db, user.tenant_id, plan, METRIC_CHAT)
     record_usage(db, user.tenant_id, METRIC_CHAT)
+
+
+@router.get("/status", response_model=ChatStatus)
+def chat_status(user: CurrentUser) -> ChatStatus:
+    """Expose provider readiness without disclosing credentials or configuration values."""
+    return ChatStatus(**assistant_status())
 
 
 @router.post("", response_model=ChatOut)
