@@ -1,10 +1,7 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CompliancePanel from "@/components/CompliancePanel";
-import KnowledgeDashboard from "@/components/KnowledgeDashboard";
-import KnowledgeInbox from "@/components/KnowledgeInbox";
+import Icon from "@/components/Icon";
 import OperationsDashboard from "@/components/OperationsDashboard";
-import FacilityPanel from "@/components/FacilityPanel";
 import LangToggle from "@/components/LangToggle";
 import {
   askStream,
@@ -22,6 +19,12 @@ import {
 import { t } from "@/lib/i18n";
 import { useLang } from "@/lib/useLang";
 import { getAccessToken, signOut } from "@/lib/supabase";
+
+const CompliancePanel = lazy(() => import("@/components/CompliancePanel"));
+const KnowledgeDashboard = lazy(() => import("@/components/KnowledgeDashboard"));
+const KnowledgeInbox = lazy(() => import("@/components/KnowledgeInbox"));
+const FacilityPanel = lazy(() => import("@/components/FacilityPanel"));
+type View = "operations" | "knowledge" | "assistant" | "facilities";
 
 interface Message {
   role: "user" | "assistant";
@@ -48,31 +51,47 @@ export default function WorkspacePage() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [tab, setTab] = useState<Tab>("chat");
   const [usage, setUsage] = useState<UsageInfo | null>(null);
-  const [view, setView] = useState<"operations" | "knowledge" | "assistant" | "facilities">("operations");
+  const [view, setView] = useState<View>("operations");
+  const [visited, setVisited] = useState<Set<View>>(() => new Set(["operations"]));
+  const [authenticated, setAuthenticated] = useState(false);
+  const [resourceState, setResourceState] = useState("idle");
+  const navigation = [
+    { id: "operations" as const, icon: "overview" as const, name: lang === "bn" ? "অপারেশনস" : "Overview" },
+    { id: "knowledge" as const, icon: "knowledge" as const, name: lang === "bn" ? "জ্ঞান ইনবক্স" : "Knowledge inbox" },
+    { id: "assistant" as const, icon: "assistant" as const, name: lang === "bn" ? "সহকারী" : "Intelligence assistant" },
+    { id: "facilities" as const, icon: "facility" as const, name: lang === "bn" ? "কারখানা" : "Facilities" },
+  ];
+  function navigate(view: View) { setView(view); setVisited(old => new Set([...old, view])); }
   const [activity, setActivity] = useState<{time: string; text: string}[]>([]);
   function recordActivity(text: string) { setActivity(old => [{time:new Date().toISOString(), text}, ...old].slice(0, 50)); }
   const [revision, setRevision] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void getAccessToken().then(token => { if (!token) router("/"); });
-    refreshDocuments().catch(() => {});
-    listTables()
-      .then(setTables)
-      .catch(() => {});
-    fetchUsage()
-      .then(setUsage)
-      .catch(() => {});
+    let active = true;
+    void getAccessToken().then(token => {
+      if (!active) return;
+      if (!token) router("/"); else setAuthenticated(true);
+    }).catch(() => { if (active) router("/"); });
+    return () => { active = false; };
   }, [router]);
 
+  useEffect(() => {
+    if (!authenticated || !visited.has("assistant")) return;
+    let active = true;
+    setResourceState("loading");
+    void Promise.all([fetchDocuments(), listTables(), fetchUsage()]).then(([docs, tables, usage]) => {
+      if (active) { setDocuments(docs); setTables(tables); setUsage(usage); setResourceState("ready"); }
+    }).catch(() => { if (active) setResourceState("error"); });
+    return () => { active = false; };
+  }, [authenticated, visited.has("assistant")]);
+
   async function refreshDocuments() {
-    setDocuments(await fetchDocuments());
-    listTables()
-      .then(setTables)
-      .catch(() => {});
-    fetchUsage()
-      .then(setUsage)
-      .catch(() => {});
+    setResourceState("loading");
+    try {
+      const [docs, tables, usage] = await Promise.all([fetchDocuments(), listTables(), fetchUsage()]);
+      setDocuments(docs); setTables(tables); setUsage(usage); setResourceState("ready");
+    } catch { setResourceState("error"); }
   }
 
   async function onUpload(file: File) {
@@ -152,19 +171,23 @@ export default function WorkspacePage() {
     router("/");
   }
 
+  if (!authenticated) return <main className="container"><p role="status">{lang === "bn" ? "ওয়ার্কস্পেস খুলছে…" : "Opening your workspace…"}</p></main>;
+
   return (
-    <main className="container">
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <a className="brand" href="#/workspace"><span className="brand-mark">L</span>Lineora<span className="brand-subtitle">FACTORY INTELLIGENCE</span></a>
+    <div className="app-shell">
+      <a className="skip-link" href="#workspace-content" onClick={e => { e.preventDefault(); document.getElementById("workspace-content")?.focus(); }}>Skip to workspace</a>
+      <aside className="sidebar">
+        <a className="brand" href="#/workspace" onClick={() => navigate("operations")}><span className="brand-mark">L</span>Lineora<span className="brand-period">.</span></a>
+        <p className="sidebar-label">{lang === "bn" ? "আপনার ওয়ার্কস্পেস" : "YOUR WORKSPACE"}</p>
+        <nav className="workspace-nav" aria-label="Workspace navigation">
+          {navigation.map(item => <button key={item.id} aria-current={view === item.id ? "page" : undefined} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.name}</span></button>)}
+        </nav>
+        <div className="sidebar-note"><span className="eyebrow">{lang === "bn" ? "প্রথম পদক্ষেপ" : "A CLEARER SHIFT STARTS HERE"}</span><p>{lang === "bn" ? "একটি লাইন দিয়ে শুরু করুন। ঘাটতি দেখুন, তারপর অনুসন্ধান করুন।" : "Start with one line. See the shortfall. Know where to look next."}</p><span className="badge">GAZIPUR · SAVAR</span></div>
+        <div className="sidebar-footer"><span className="status-dot"/>{lang === "bn" ? "পাইলট ওয়ার্কস্পেস" : "Pilot workspace"}</div>
+      </aside>
+      <div className="workspace-body">
+      <header className="workspace-header">
+        <div><span className="muted">{lang === "bn" ? "কারখানার ইন্টেলিজেন্স" : "Factory intelligence"}</span><strong>{navigation.find(item => item.id === view)?.name}</strong></div>
         {usage && <UsageBadge usage={usage} />}
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <LangToggle lang={lang} onChange={setLang} />
@@ -173,19 +196,16 @@ export default function WorkspacePage() {
           </button>
         </span>
       </header>
-
-      <nav className="workspace-nav" aria-label="Workspace navigation">
-        <button className="btn btn-ghost" aria-current={view === "operations" ? "page" : undefined} onClick={() => setView("operations")}>{lang === "bn" ? "অপারেশনস" : "Operations"}</button>
-        <button className="btn btn-ghost" aria-current={view === "knowledge" ? "page" : undefined} onClick={() => setView("knowledge")}>{lang === "bn" ? "জ্ঞান ইনবক্স" : "Knowledge inbox"}</button>
-        <button className="btn btn-ghost" aria-current={view === "assistant" ? "page" : undefined} onClick={() => setView("assistant")}>{lang === "bn" ? "সহকারী ও টুলস" : "Assistant & tools"}</button>
-        <button className="btn btn-ghost" aria-current={view === "facilities" ? "page" : undefined} onClick={() => setView("facilities")}>Facilities</button>
-      </nav>
-      {view === "operations" && <><OperationsDashboard lang={lang} onKnowledge={() => setView("knowledge")} onActivity={recordActivity} /><section className="panel"><h3>Session activity</h3><p className="muted">Last 50 actions in this tab. Clears on refresh; not a durable audit log.</p>{activity.length === 0 ? <p>No completed actions in this session.</p> : <ol>{activity.map((a,i) => <li key={i}>{new Date(a.time).toLocaleTimeString("en-GB", {timeZone:"Asia/Dhaka"})} · {a.text}</li>)}</ol>}</section></>}
-      {view === "facilities" && <FacilityPanel />}
-      {view === "knowledge" && <><KnowledgeInbox lang={lang} onUploaded={() => { recordActivity("Knowledge file accepted for processing"); setRevision(x => x + 1); void refreshDocuments().catch(() => {}); }} /><KnowledgeDashboard lang={lang} revision={revision} /></>}
-      {view === "assistant" && <div className="assistant-grid">
+      <main className="workspace-content" id="workspace-content" tabIndex={-1}>
+      <Suspense fallback={<div className="panel" role="status">{lang === "bn" ? "খুলছে…" : "Loading this section…"}</div>}>
+      <div hidden={view !== "operations"}><OperationsDashboard lang={lang} onKnowledge={() => navigate("knowledge")} onActivity={recordActivity} /><section className="panel activity-panel"><div className="section-heading"><h3>{lang === "bn" ? "সাম্প্রতিক কার্যক্রম" : "Recent activity"}</h3><span className="badge">{lang === "bn" ? "এই সেশন" : "This session"}</span></div><p className="muted">{lang === "bn" ? "রিফ্রেশ করলে এই তালিকা মুছে যায়।" : "Last 50 completed actions. This list clears on refresh."}</p>{activity.length === 0 ? <p className="muted">{lang === "bn" ? "প্রথম বিশ্লেষণ বা আপলোড এখানে দেখা যাবে।" : "Your first analysis or upload will appear here."}</p> : <ol className="activity-list">{activity.map((a,i) => <li key={i}><time>{new Date(a.time).toLocaleTimeString("en-GB", {timeZone:"Asia/Dhaka",hour:"2-digit",minute:"2-digit"})}</time><span>{a.text}</span></li>)}</ol>}</section></div>
+      {visited.has("facilities") && <div hidden={view !== "facilities"}><FacilityPanel /></div>}
+      {visited.has("knowledge") && <div hidden={view !== "knowledge"}><KnowledgeInbox lang={lang} onUploaded={() => { recordActivity("Knowledge file accepted for processing"); setRevision(x => x + 1); if (visited.has("assistant")) void refreshDocuments(); }} /><KnowledgeDashboard lang={lang} revision={revision} /></div>}
+      {visited.has("assistant") && <div hidden={view !== "assistant"}><div className="assistant-grid">
         <section className="panel">
           <h2 style={{ marginTop: 0, fontSize: 16 }}>{tr.knowledgeBase}</h2>
+          {resourceState === "loading" && <p role="status">Loading sources…</p>}
+          {resourceState === "error" && <div role="alert"><p className="error-text">Sources are unavailable.</p><button className="btn btn-ghost" onClick={() => void refreshDocuments()}>Retry sources</button></div>}
           <input
             ref={fileInput}
             type="file"
@@ -218,7 +238,7 @@ export default function WorkspacePage() {
                 </div>
               </li>
             ))}
-            {documents.length === 0 && <li className="muted">{tr.noDocsYet}</li>}
+            {resourceState === "ready" && documents.length === 0 && <li className="muted">{tr.noDocsYet}</li>}
           </ul>
         </section>
 
@@ -353,12 +373,13 @@ export default function WorkspacePage() {
               <div
                 style={{ flex: 1, overflowY: "auto", display: "grid", gap: 12, alignContent: "start" }}
               >
-                {messages.length === 0 && <p className="muted">{tr.tryPrompt}</p>}
+                {messages.length === 0 && <div className="assistant-welcome"><span className="assistant-orb"><Icon name="assistant"/></span><h2>{lang === "bn" ? "আপনার প্রশ্ন। আপনার কারখানার জ্ঞান।" : "A clearer answer starts with your records."}</h2><p className="muted">{lang === "bn" ? "একটি প্রশ্ন বেছে নিন বা নিচে লিখুন।" : "Choose a starting question, or ask in your own words."}</p><div className="prompt-grid">{(lang === "bn" ? ["মেশিন রক্ষণাবেক্ষণের এসওপি খুঁজুন।", "আপলোড করা শিফট হ্যান্ডওভার নোট সংক্ষেপ করুন।"] : ["Find the SOP for machine maintenance.", "Summarize the uploaded shift handover notes."]).map(prompt => <button className="btn btn-ghost" key={prompt} onClick={() => setQuestion(prompt)}>{prompt}<Icon name="arrow"/></button>)}</div></div>}
                 {messages.map((msg, i) => (
                   <div key={i}>
                     <div
                       style={{
                         background: msg.role === "user" ? "var(--accent-dark)" : "var(--bg)",
+                        color: msg.role === "user" ? "white" : "var(--text)",
                         border: `1px solid ${msg.role === "user" ? "transparent" : "var(--border)"}`,
                         borderRadius: 8,
                         padding: 12,
@@ -391,12 +412,13 @@ export default function WorkspacePage() {
                 )}
               </div>
 
-              {error && <p className="error-text">{error}</p>}
+              {error && <p role="alert" className="error-text">{error}</p>}
 
               <form onSubmit={onAsk} style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <input
                   className="input"
                   placeholder={tr.askPlaceholder}
+                  aria-label={tr.askPlaceholder}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                 />
@@ -407,8 +429,11 @@ export default function WorkspacePage() {
             </>
           )}
         </section>
-      </div>}
-    </main>
+      </div></div>}
+      </Suspense>
+      </main>
+      </div>
+    </div>
   );
 }
 

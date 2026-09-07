@@ -12,6 +12,9 @@ export default function LangToggle({
   return (
     <span style={{ display: "inline-flex", gap: 4 }}>
       <button
+        type="button"
+        aria-label="English"
+        aria-pressed={lang === "en"}
         className="btn btn-ghost"
         style={{
           padding: "4px 10px",
@@ -23,6 +26,9 @@ export default function LangToggle({
         EN
       </button>
       <button
+        type="button"
+        aria-label="বাংলা"
+        aria-pressed={lang === "bn"}
         className="btn btn-ghost"
         style={{
           padding: "4px 10px",
