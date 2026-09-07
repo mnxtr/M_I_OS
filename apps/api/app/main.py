@@ -19,6 +19,7 @@ from app.routers import (
     operations,
     payment_sandbox,
     payments,
+    production_drafts,
     tenant,
 )
 
@@ -36,7 +37,13 @@ def _init_schema() -> None:
     settings = get_settings()
     with engine.begin() as conn:
         conn.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
-    Base.metadata.create_all(engine)
+    # Draft storage is migration-only so bootstrap cannot create it without its RLS/grants.
+    Base.metadata.create_all(
+        engine,
+        tables=[
+            table for table in Base.metadata.sorted_tables if table.name != "production_drafts"
+        ],
+    )
     from app.models import apply_rls
 
     apply_rls()
@@ -66,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router)
     app.include_router(dashboard.router)
     app.include_router(operations.router)
+    app.include_router(production_drafts.router)
     app.include_router(chat.router)
     app.include_router(analytics.router)
     app.include_router(compliance.router)

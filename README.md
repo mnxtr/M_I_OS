@@ -16,6 +16,7 @@ below include roadmap items; use the following documents as the current release 
 - [Market, SaaS architecture and revenue experiments](docs/08-LINEORA-SaaS-AND-MARKET.md)
 - [Code contracts, Grok behavior and deployment runbook](docs/09-LINEORA-ENGINEERING.md)
 - [Frontend refresh and prioritized UX plan](docs/10-LINEORA-FRONTEND-PLAN.md)
+- [Production draft implementation and activation](docs/11-PRODUCTION-DRAFTS.md)
 
 <p align="center">
   <strong>Turn factory data into decisions.</strong>

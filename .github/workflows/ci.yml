@@ -19,9 +19,11 @@ jobs:
           cache: pip
           cache-dependency-path: apps/api/pyproject.toml
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,migrations]"
       - name: Lint
         run: ruff check app tests ../../evals/run_eval.py
+      - name: Compile PostgreSQL migrations
+        run: alembic upgrade head --sql > /tmp/lineora-schema.sql
       - name: Unit + integration tests (DSN-gated tests skip)
         run: python -m pytest tests -q
         env:

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_publishable_key: str = ""
     dev_bootstrap_schema: bool = False
+    production_drafts_enabled: bool = False
     cors_origins: list[str] = []
     payment_sandbox_enabled: bool = False
     sslcommerz_store_id: str = ""

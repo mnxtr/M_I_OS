@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import OperationsDashboard from "./OperationsDashboard";
 
 vi.mock("@/lib/supabase", () => ({ getAccessToken: vi.fn().mockResolvedValue("test-token") }));
+vi.mock("./ProductionDraftSync", () => ({ default: () => null }));
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it("never invents live metrics and labels the demo input", async () => {

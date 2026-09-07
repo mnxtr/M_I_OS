@@ -12,6 +12,7 @@ vi.mock("@/lib/api", () => ({
 }));
 vi.mock("@/components/KnowledgeInbox", () => ({ default: () => <h2>Test knowledge inbox</h2> }));
 vi.mock("@/components/KnowledgeDashboard", () => ({ default: () => <p>Test source status</p> }));
+vi.mock("@/components/ProductionDraftSync", () => ({ default: () => null }));
 beforeEach(() => {
   localStorage.clear();
   vi.mocked(fetchDocuments).mockResolvedValue([]);

@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import Icon from "@/components/Icon";
+import ProductionDraftSync from "@/components/ProductionDraftSync";
 import { API_URL } from "@/lib/api";
 import { Lang } from "@/lib/i18n";
 import { getAccessToken } from "@/lib/supabase";
@@ -72,8 +73,9 @@ export default function OperationsDashboard({ lang, onKnowledge, onActivity }: {
   return <section className="operations-dashboard">
     <div className="overview-heading"><div><span className="eyebrow">{bn ? "অপারেশনস ওভারভিউ" : "THE PRODUCTION PICTURE"}</span><h1>{bn ? "প্রতিটি শিফট, আরও স্পষ্ট।" : "Every shift. A little clearer."}</h1><p className="muted">{bn ? "লক্ষ্য, প্রকৃত উৎপাদন ও ঘাটতি—এক জায়গায়।" : "See what is falling behind, find the pattern, and focus your next conversation."}</p></div><button className="btn btn-ghost" onClick={onKnowledge}>{bn ? "জ্ঞান ইনবক্স" : "Knowledge inbox"}<Icon name="arrow"/></button></div>
     <div className="workflow-strip" aria-label={bn ? "কাজের ধাপ" : "Analysis workflow"}><span><b>01</b>{bn ? "রেকর্ড যোগ" : "Add actuals"}</span><span><b>02</b>{bn ? "খসড়া যাচাই" : "Review your draft"}</span><span><b>03</b>{bn ? "ঘাটতি দেখুন" : "Find the gaps"}</span></div>
+    <ProductionDraftSync value={input} disabled={busy} lang={lang} onRestore={restored => { setInput(restored); setResult(null); setError(""); setNotice(""); setConfirmDemo(false); }}/>
     <form className="analysis-form" onSubmit={e => void analyze(e)}>
-      <div className="section-heading"><div><span className="eyebrow">{bn ? "শুরু করুন" : "START WITH THE ACTUALS"}</span><h2>{bn ? "ঘণ্টাভিত্তিক উৎপাদন" : "Hourly production"}</h2></div><span className="badge">{bn ? "খসড়া · সংরক্ষিত নয়" : "Draft · not saved"}</span></div>
+      <div className="section-heading"><div><span className="eyebrow">{bn ? "শুরু করুন" : "START WITH THE ACTUALS"}</span><h2>{bn ? "ঘণ্টাভিত্তিক উৎপাদন" : "Hourly production"}</h2></div><span className="badge">{bn ? "বিশ্লেষণের খসড়া" : "Workbench draft"}</span></div>
       <fieldset disabled={busy} className="entry-fieldset"><legend className="sr-only">{bn ? "উৎপাদনের রেকর্ড" : "Production observation"}</legend>
       <div className="entry-grid">
         <label>{bn ? "লাইন" : "Line"}<input className="input" value={entry.line} onChange={e => setEntry({...entry,line:e.target.value})} placeholder="Line 01" maxLength={80}/></label>
@@ -94,7 +96,7 @@ export default function OperationsDashboard({ lang, onKnowledge, onActivity }: {
       </fieldset>
       <div className="button-row"><button className="btn" disabled={busy || !input.trim() || draft?.observations.length === 0}>{busy ? (bn ? "বিশ্লেষণ হচ্ছে…" : "Analyzing…") : (bn ? "ঘাটতি বিশ্লেষণ" : "Analyze gaps")}<Icon name="arrow"/></button><button type="button" className="btn btn-ghost" disabled={busy} onClick={() => input.trim() ? setConfirmDemo(true) : loadDemo()}>{bn ? "ডেমো রেকর্ড দিন" : "Load labeled demo records"}</button></div>
       {confirmDemo && <div className="demo-confirm" role="group" aria-label="Replace draft with demo"><p>{bn ? "বর্তমান খসড়া ডেমো দিয়ে বদলাবেন?" : "Replace your current draft with sample records?"}</p><button className="btn btn-ghost" type="button" disabled={busy} onClick={() => setConfirmDemo(false)}>{bn ? "খসড়া রাখুন" : "Keep my draft"}</button><button className="btn" type="button" disabled={busy} onClick={loadDemo}>{bn ? "ডেমো ব্যবহার করুন" : "Use demo records"}</button></div>}
-      <p className="muted">{bn ? "রিফ্রেশ করলে খসড়া মুছে যায়। অজানা উৎপাদনের ঘর ফাঁকা রাখুন।" : "Drafts stay while switching sections, but clear on refresh. Leave actual blank when output is unknown."}</p>
+      <p className="muted">{bn ? "রিফ্রেশের আগে খসড়া সংরক্ষণ করুন। অজানা উৎপাদনের ঘর ফাঁকা রাখুন।" : "Use Save draft before refreshing. Leave actual blank when output is unknown."}</p>
     </form>
     {error && <p role="alert" className="error-panel">{error}</p>}
     {!result && !busy && <div className="empty-panel"><h3>{bn ? "আপনার পরবর্তী সিদ্ধান্ত এখান থেকে শুরু" : "Your next production decision starts here"}</h3><p>{bn ? "প্রকৃত রেকর্ড দিয়ে বিশ্লেষণ করুন।" : "Analyze submitted records to see target attainment, shortfall runs, and recurring time slots. No live production feed is connected yet."}</p></div>}

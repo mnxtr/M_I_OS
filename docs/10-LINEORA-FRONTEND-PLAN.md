@@ -30,8 +30,10 @@ look like live production numbers.
 | Every screen shipped in the initial page module | Lazy workspace route and secondary components | Defers screen code until it is needed |
 | File drop area had no drag feedback | Highlighted drop state and clearer processing explanation | Visible feedback without exposing implementation jargon |
 
-Draft retention is in memory, not durable storage. Refresh or sign-out still clears drafts. No
-factory data is copied into localStorage by this change. The UI states that limitation explicitly.
+The initial refresh retained drafts only in memory. The next implementation adds explicit
+server save/restore, subject to migration and backend enablement; see
+[the activation contract](11-PRODUCTION-DRAFTS.md). Unsaved changes still clear on refresh or
+sign-out. No factory data is copied into localStorage by these changes.
 The result line filter applies to the chart/table; summary cards and patterns retain the full
 submitted scope, with a visible explanation.
 
