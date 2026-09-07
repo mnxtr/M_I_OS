@@ -130,7 +130,9 @@ class BkashClient:
 
 def _callback_url() -> str:
     s = get_settings()
-    return f"{s.public_base_url.rstrip('/')}/workspace?payment=bkash"
+    if not s.api_public_base_url.startswith("https://"):
+        raise RuntimeError("An HTTPS API_PUBLIC_BASE_URL is required for callbacks")
+    return f"{s.api_public_base_url.rstrip('/')}/v1/payments/bkash/callback"
 
 
 def _checked(response: httpx.Response) -> dict:
@@ -145,6 +147,4 @@ def _checked(response: httpx.Response) -> dict:
 def execution_succeeded(payload: dict) -> bool:
     """Interpret an execute/query payload's transaction status."""
     status = str(payload.get("transactionStatus", "")).lower()
-    if status in ("completed",):
-        return True
-    return str(payload.get("paymentStatus", payload.get("statusCode", ""))).lower() == "0000"
+    return status == "completed" and str(payload.get("statusCode", "0000")) == "0000"

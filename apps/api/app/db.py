@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import get_settings
@@ -13,12 +13,6 @@ class Base(DeclarativeBase):
 def _make_engine():
     settings = get_settings()
     engine = create_engine(settings.database_url, pool_pre_ping=True)
-
-    @event.listens_for(engine, "connect")
-    def _register_type(dbapi_connection, _record):  # noqa: ANN001
-        cursor = dbapi_connection.cursor()
-        cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        cursor.close()
 
     return engine
 

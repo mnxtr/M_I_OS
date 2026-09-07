@@ -1,3 +1,5 @@
+import { getAccessToken, supabase } from "./supabase";
+
 export const API_URL =
   import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -26,8 +28,8 @@ export interface DocumentRecord {
   created_at: string;
 }
 
-function authHeaders(): HeadersInit {
-  const token = localStorage.getItem("mios_token");
+async function authHeaders(): Promise<HeadersInit> {
+  const token = await getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -45,6 +47,11 @@ async function handle<T>(response: Response): Promise<T> {
 }
 
 export async function login(email: string, password: string): Promise<string> {
+  if (supabase) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.session) throw new Error(error?.message ?? "Sign-in failed");
+    return data.session.access_token;
+  }
   const res = await fetch(`${API_URL}/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -60,6 +67,13 @@ export async function register(
   email: string,
   password: string,
 ): Promise<string> {
+  if (supabase) {
+    const { data, error } = await supabase.auth.signUp({ email, password,
+      options: { data: { full_name: fullName, company_name: companyName } } });
+    if (error) throw new Error(error.message);
+    if (!data.session) throw new Error("Check your email to confirm your account. Factory membership must be provisioned by an administrator.");
+    return data.session.access_token;
+  }
   const res = await fetch(`${API_URL}/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,7 +89,7 @@ export async function register(
 }
 
 export async function fetchDocuments(): Promise<DocumentRecord[]> {
-  const res = await fetch(`${API_URL}/v1/documents`, { headers: authHeaders() });
+  const res = await fetch(`${API_URL}/v1/documents`, { headers: await authHeaders() });
   return handle<DocumentRecord[]>(res);
 }
 
@@ -84,7 +98,7 @@ export async function uploadDocument(file: File): Promise<void> {
   form.append("file", file);
   const res = await fetch(`${API_URL}/v1/documents`, {
     method: "POST",
-    headers: authHeaders(),
+    headers: await authHeaders(),
     body: form,
   });
   await handle(res);
@@ -93,7 +107,7 @@ export async function uploadDocument(file: File): Promise<void> {
 export async function ask(question: string): Promise<ChatResponse> {
   const res = await fetch(`${API_URL}/v1/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json", ...await authHeaders() },
     body: JSON.stringify({ question }),
   });
   return handle<ChatResponse>(res);
@@ -110,7 +124,7 @@ export async function askStream(
 ): Promise<void> {
   const res = await fetch(`${API_URL}/v1/chat/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json", ...await authHeaders() },
     body: JSON.stringify({ question }),
   });
   if (!res.ok || !res.body) {
@@ -127,6 +141,7 @@ async function consumeSse(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let finished = false;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -136,15 +151,14 @@ async function consumeSse(
     buffer = lines.pop() ?? "";
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue;
-      try {
-        const event = JSON.parse(line.slice(6));
-        if (event.type === "citations") handlers.onCitations?.(event.citations);
-        else if (event.type === "token") handlers.onToken(event.value);
-      } catch {
-        // ignore malformed frames
-      }
+      const event = JSON.parse(line.slice(6));
+      if (event.type === "citations") handlers.onCitations?.(event.citations);
+      else if (event.type === "token") handlers.onToken(event.value);
+      else if (event.type === "error") throw new Error(event.message ?? "Response interrupted");
+      else if (event.type === "done") finished = true;
     }
   }
+  if (!finished) throw new Error("Response interrupted before completion. Please retry.");
 }
 
 export interface TableInfo {
@@ -157,7 +171,7 @@ export interface TableInfo {
 
 export async function listTables(): Promise<TableInfo[]> {
   const res = await fetch(`${API_URL}/v1/analytics/tables`, {
-    headers: authHeaders(),
+    headers: await authHeaders(),
   });
   return handle<TableInfo[]>(res);
 }
@@ -176,7 +190,7 @@ export async function runQuery(
 ): Promise<QueryResult> {
   const res = await fetch(`${API_URL}/v1/analytics/query`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json", ...await authHeaders() },
     body: JSON.stringify({ question, table_id: tableId ?? null }),
   });
   return handle<QueryResult>(res);
@@ -192,7 +206,7 @@ export interface TemplateInfo {
 
 export async function listTemplates(): Promise<TemplateInfo[]> {
   const res = await fetch(`${API_URL}/v1/compliance/templates`, {
-    headers: authHeaders(),
+    headers: await authHeaders(),
   });
   return handle<TemplateInfo[]>(res);
 }
@@ -209,7 +223,7 @@ export interface AssessmentInfo {
 
 export async function listAssessments(): Promise<AssessmentInfo[]> {
   const res = await fetch(`${API_URL}/v1/compliance/assessments`, {
-    headers: authHeaders(),
+    headers: await authHeaders(),
   });
   return handle<AssessmentInfo[]>(res);
 }
@@ -221,7 +235,7 @@ export async function createAssessment(
 ): Promise<AssessmentInfo> {
   const res = await fetch(`${API_URL}/v1/compliance/assessments`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json", ...await authHeaders() },
     body: JSON.stringify({ template_code: templateCode, title, due_date: dueDate }),
   });
   return handle<AssessmentInfo>(res);
@@ -245,7 +259,7 @@ export async function getAssessmentItems(
 ): Promise<AssessmentItemRecord[]> {
   const res = await fetch(
     `${API_URL}/v1/compliance/assessments/${assessmentId}`,
-    { headers: authHeaders() },
+    { headers: await authHeaders() },
   );
   return handle<AssessmentItemRecord[]>(res);
 }
@@ -256,7 +270,7 @@ export async function autoAssessStream(
 ): Promise<void> {
   const res = await fetch(
     `${API_URL}/v1/compliance/assessments/${assessmentId}/auto-assess`,
-    { method: "POST", headers: authHeaders() },
+    { method: "POST", headers: await authHeaders() },
   );
   if (!res.ok || !res.body) {
     await handle(res);
@@ -299,7 +313,7 @@ export async function updateAssessmentItem(
 ): Promise<AssessmentItemRecord> {
   const res = await fetch(`${API_URL}/v1/compliance/items/${itemId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json", ...await authHeaders() },
     body: JSON.stringify(patch),
   });
   return handle<AssessmentItemRecord>(res);
@@ -308,7 +322,7 @@ export async function updateAssessmentItem(
 export async function draftCap(itemId: string): Promise<AssessmentItemRecord> {
   const res = await fetch(`${API_URL}/v1/compliance/items/${itemId}/cap`, {
     method: "POST",
-    headers: authHeaders(),
+    headers: await authHeaders(),
   });
   return handle<AssessmentItemRecord>(res);
 }
@@ -318,7 +332,7 @@ export function binderUrl(assessmentId: string): string {
 }
 
 export async function downloadBinder(assessmentId: string): Promise<void> {
-  const res = await fetch(binderUrl(assessmentId), { headers: authHeaders() });
+  const res = await fetch(binderUrl(assessmentId), { headers: await authHeaders() });
   if (!res.ok) {
     await handle(res);
     return;
@@ -343,7 +357,7 @@ export interface UsageInfo {
 }
 
 export async function fetchUsage(): Promise<UsageInfo> {
-  const res = await fetch(`${API_URL}/v1/tenant/usage`, { headers: authHeaders() });
+  const res = await fetch(`${API_URL}/v1/tenant/usage`, { headers: await authHeaders() });
   return handle<UsageInfo>(res);
 }
 
@@ -356,7 +370,7 @@ export interface PlanInfo {
 export async function switchPlan(planCode: string): Promise<PlanInfo> {
   const res = await fetch(`${API_URL}/v1/tenant/plan`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json", ...await authHeaders() },
     body: JSON.stringify({ plan: planCode }),
   });
   return handle<PlanInfo>(res);

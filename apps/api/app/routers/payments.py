@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import Response
@@ -65,9 +66,11 @@ def _tenant_of(db, user: CurrentUser) -> Tenant:
 
 
 @router.post("/bkash/create")
-def create_bkash_payment(
-    payload: CreatePaymentIn, user: CurrentUser, db: DbDep
-) -> dict:
+def create_bkash_payment(payload: CreatePaymentIn, user: CurrentUser, db: DbDep) -> dict:
+    if not get_settings().payment_sandbox_enabled:
+        raise HTTPException(503, "Payment sandbox is disabled")
+    if get_settings().bkash_base_url != "https://tokenized.sandbox.bka.sh/v1.2.0-beta":
+        raise HTTPException(503, "Only the bKash sandbox is enabled in this release")
     if user.role not in ("owner", "admin"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner or admin required")
     if not bkash_configured():
@@ -96,7 +99,7 @@ def create_bkash_payment(
     except Exception as exc:  # noqa: BLE001 — surface gateway errors to payer UI
         payment.status = "failed"
         payment.raw_response = {"error": str(exc)[:500]}
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"bKash create failed: {exc}") from exc
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "bKash create failed") from exc
 
     payment.bkash_payment_id = str(result.get("paymentID", ""))
     payment.raw_response = {"create": result}
@@ -116,38 +119,56 @@ def bkash_callback(
     paymentID: str = Query(default="", alias="paymentID"),
     paymentStatus: str = Query(default=""),
 ) -> Response:
-    """bKash redirects the payer here; we verify server-side then activate."""
+    """Verify sandbox payment server-side; never activate a paid subscription."""
+    if not get_settings().payment_sandbox_enabled:
+        raise HTTPException(503, "Payment sandbox is disabled")
+    if get_settings().bkash_base_url != "https://tokenized.sandbox.bka.sh/v1.2.0-beta":
+        raise HTTPException(503, "Only sandbox verification is enabled")
     if not paymentID:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Missing paymentID")
-    payment = (
-        db.query(Payment).filter(Payment.bkash_payment_id == paymentID).one_or_none()
-    )
+    payment = db.query(Payment).filter(Payment.bkash_payment_id == paymentID).one_or_none()
     if payment is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown payment")
 
     client = BkashClient()
     try:
-        executed = client.execute_payment(paymentID)
+        executed = client.query_payment(paymentID)
+        if not execution_succeeded(executed):
+            executed = client.execute_payment(paymentID)
+        executed = client.query_payment(paymentID)
     except Exception as exc:  # noqa: BLE001 — payer may cancel before execute
         payment.status = "failed" if paymentStatus != "cancel" else "canceled"
         payment.raw_response = {"execute_error": str(exc)[:500]}
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "bKash execute failed") from exc
 
-    if execution_succeeded(executed):
+    try:
+        amount_matches = Decimal(str(executed.get("amount", ""))) == Decimal(
+            str(payment.amount_bdt)
+        )
+    except InvalidOperation:
+        amount_matches = False
+    verified = (
+        execution_succeeded(executed)
+        and amount_matches
+        and executed.get("currency") == "BDT"
+        and executed.get("paymentID") == paymentID
+    )
+    if verified:
         payment.status = "succeeded"
         payment.completed_at = datetime.now(UTC)
-        tenant = db.get(Tenant, payment.tenant_id)
-        if tenant is not None:
-            tenant.plan = payment.plan
+        # Sandbox money must never activate a real subscription.
     else:
         payment.status = "failed"
     payment.raw_response = {**(payment.raw_response or {}), "execute": executed}
     db.flush()
 
+    frontend = get_settings().public_base_url.rstrip("/")
+    if not frontend.startswith("https://"):
+        raise HTTPException(503, "HTTPS frontend callback origin is required")
     redirect_target = (
-        f"/workspace?payment=success&invoice={payment.invoice_no}"
+        f"{frontend}/#/workspace?payment=sandbox-success&invoice={payment.invoice_no}"
         if payment.status == "succeeded"
-        else f"/workspace?payment={payment.status}"
+        else f"{frontend}/#/workspace?payment={payment.status}"
     )
     return Response(status_code=status.HTTP_302_FOUND, headers={"Location": redirect_target})
 
@@ -155,7 +176,11 @@ def bkash_callback(
 @router.get("", response_model=list[PaymentOut])
 def list_payments(user: CurrentUser, db: DbDep) -> list[PaymentOut]:
     payments = (
-        db.query(Payment).order_by(Payment.created_at.desc()).limit(100).all()
+        db.query(Payment)
+        .filter(Payment.tenant_id == user.tenant_id)
+        .order_by(Payment.created_at.desc())
+        .limit(100)
+        .all()
     )
     return [_payment_out(p) for p in payments]
 
@@ -186,17 +211,5 @@ def download_invoice(payment_id: uuid.UUID, user: CurrentUser, db: DbDep) -> Res
 
 @router.post("/{payment_id}/mark-paid", response_model=PaymentOut)
 def mark_bank_transfer_paid(payment_id: uuid.UUID, user: CurrentUser, db: DbDep) -> PaymentOut:
-    """Manual reconciliation for bank transfers (owner confirms money received)."""
-    if user.role != "owner":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner required")
-    payment = db.get(Payment, payment_id)
-    if payment is None or payment.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
-    payment.provider = "bank_transfer"
-    payment.status = "succeeded"
-    payment.completed_at = datetime.now(UTC)
-    tenant = db.get(Tenant, payment.tenant_id)
-    if tenant is not None:
-        tenant.plan = payment.plan
-    db.flush()
-    return _payment_out(payment)
+    """Reserved for a future platform billing role, never a customer self-service action."""
+    raise HTTPException(403, "Only platform billing staff may reconcile bank transfers")

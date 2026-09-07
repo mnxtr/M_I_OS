@@ -6,6 +6,7 @@ import { login, register } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useLang } from "@/lib/useLang";
 import LangToggle from "@/components/LangToggle";
+import { getAccessToken, supabaseEnabled } from "@/lib/supabase";
 
 export default function AuthPage() {
   const router = useNavigate();
@@ -20,7 +21,7 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("mios_token")) router("/workspace");
+    void getAccessToken().then(token => { if (token) router("/workspace"); });
   }, [router]);
 
   async function onSubmit(event: FormEvent) {
@@ -49,6 +50,7 @@ export default function AuthPage() {
         </div>
         <h1 style={{ fontSize: 28, marginBottom: 4 }}>{tr.appName}</h1>
         <p className="muted" style={{ marginTop: 0 }}>{tr.tagline}</p>
+        <p className="muted">{supabaseEnabled ? "Supabase sign-in · Factory access requires an active membership." : "Development sign-in · Supabase is not configured in this build."}</p>
 
         <form onSubmit={onSubmit} className="panel" style={{ display: "grid", gap: 12 }}>
           <div style={{ display: "flex", gap: 8 }}>
@@ -75,6 +77,7 @@ export default function AuthPage() {
               <input
                 className="input"
                 placeholder={tr.companyName}
+                aria-label={tr.companyName}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 required
@@ -82,6 +85,7 @@ export default function AuthPage() {
               <input
                 className="input"
                 placeholder={tr.yourName}
+                aria-label={tr.yourName}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
@@ -91,6 +95,8 @@ export default function AuthPage() {
             className="input"
             type="email"
             placeholder={tr.email}
+            aria-label={tr.email}
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -99,13 +105,15 @@ export default function AuthPage() {
             className="input"
             type="password"
             placeholder={tr.password}
+            aria-label={tr.password}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
-          {error && <p className="error-text">{error}</p>}
+          {error && <p role="alert" className="error-text">{error}</p>}
 
           <button className="btn" disabled={busy}>
             {busy ? tr.pleaseWait : mode === "login" ? tr.signIn : tr.createAccount}

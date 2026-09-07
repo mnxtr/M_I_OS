@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_db, set_tenant
 from app.models import User
 from app.security import decode_token
@@ -21,12 +22,21 @@ def get_current_user(
 ) -> User:
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+    if get_settings().auth_provider == "supabase":
+        from app.services.supabase_auth import verify_user
+
+        user = verify_user(credentials.credentials)
+        set_tenant(db, user.tenant_id)
+        return user
+    if get_settings().auth_provider != "legacy":
+        raise HTTPException(503, "Unknown authentication provider")
     try:
         payload = decode_token(credentials.credentials)
-    except pyjwt.PyJWTError:
+        user_id = uuid.UUID(payload["sub"])
+    except (pyjwt.PyJWTError, KeyError, ValueError, TypeError, AttributeError):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token") from None
 
-    user = db.get(User, uuid.UUID(payload["sub"]))
+    user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
 

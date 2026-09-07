@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   build: {
+    rollupOptions: { output: { manualChunks: { supabase: ["@supabase/supabase-js"] } } },
     outDir: "dist",
     sourcemap: false,
   },

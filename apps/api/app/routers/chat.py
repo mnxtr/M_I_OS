@@ -59,8 +59,12 @@ def chat_stream(payload: ChatIn, user: CurrentUser, db: DbDep) -> StreamingRespo
 
     async def event_stream() -> AsyncIterator[str]:
         yield sse("citations", {"citations": citations_payload})
-        async for token in stream_answer(payload.question, contexts):
-            yield sse("token", {"value": token})
+        try:
+            async for token in stream_answer(payload.question, contexts):
+                yield sse("token", {"value": token})
+        except Exception:
+            yield sse("error", {"message": "Response interrupted. Please retry."})
+            return
         yield sse("done", {})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

@@ -1,8 +1,8 @@
 export type Lang = "en" | "bn";
 
 const en = {
-  appName: "MIOS",
-  tagline: "Manufacturing OS Intelligence — ask your factory anything.",
+  appName: "Lineora",
+  tagline: "See the gap. Keep production moving.",
   signIn: "Sign in",
   registerFactory: "Register factory",
   companyName: "Company name (e.g. Meghna Apparels Ltd)",
@@ -11,7 +11,7 @@ const en = {
   password: "Password (min 8 chars)",
   pleaseWait: "Please wait…",
   createAccount: "Create account",
-  workspace: "MIOS Workspace",
+  workspace: "Lineora Workspace",
   signOut: "Sign out",
   knowledgeBase: "Knowledge Base",
   uploadDoc: "Upload document (PDF/TXT/Excel)",
@@ -50,8 +50,8 @@ const en = {
 type Dict = typeof en;
 
 const bn: Dict = {
-  appName: "এমআইওএস",
-  tagline: "ম্যানুফ্যাকচারিং ওএস ইন্টেলিজেন্স — আপনার কারখানাকে যা খুশি জিজ্ঞেস করুন।",
+  appName: "লাইনোরা",
+  tagline: "ঘাটতি দেখুন। উৎপাদন এগিয়ে নিন।",
   signIn: "সাইন ইন",
   registerFactory: "কারখানা নিবন্ধন",
   companyName: "প্রতিষ্ঠানের নাম (যেমন: মেঘনা অ্যাপারেলস লিমিটেড)",

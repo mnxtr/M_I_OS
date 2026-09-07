@@ -103,7 +103,7 @@ def main() -> int:
 
     os.environ.setdefault("DATABASE_URL", dsn)
 
-    from app.main import _init_schema  # noqa: F401 — ensure schema exists
+    from app.main import _init_schema
 
     _init_schema()
     report = asyncio.run(evaluate(cases))

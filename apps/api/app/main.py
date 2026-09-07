@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.config import get_settings
@@ -12,8 +13,11 @@ from app.routers import (
     chat,
     compliance,
     connectors,
+    dashboard,
     documents,
     guest,
+    operations,
+    payment_sandbox,
     payments,
     tenant,
 )
@@ -21,7 +25,8 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    _init_schema()
+    if get_settings().dev_bootstrap_schema:
+        _init_schema()
     yield
 
 
@@ -49,9 +54,18 @@ def _init_schema() -> None:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="MIOS API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Lineora API", version="0.2.0", lifespan=lifespan)
+    if get_settings().cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=get_settings().cors_origins,
+            allow_methods=["GET", "POST", "PATCH", "DELETE"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
     app.include_router(auth.router)
     app.include_router(documents.router)
+    app.include_router(dashboard.router)
+    app.include_router(operations.router)
     app.include_router(chat.router)
     app.include_router(analytics.router)
     app.include_router(compliance.router)
@@ -59,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(tenant.router)
     app.include_router(connectors.router)
     app.include_router(payments.router)
+    app.include_router(payment_sandbox.router)
 
     @app.get("/health")
     def health() -> dict:

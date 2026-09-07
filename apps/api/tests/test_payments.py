@@ -27,7 +27,9 @@ def test_bkash_configured_requires_all_credentials():
     assert not bkash_configured(BkashConfig("", "", "", "", ""))
 
 
-def test_grant_then_create_payment_request_shape():
+def test_grant_then_create_payment_request_shape(monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "api_public_base_url", "https://api.example.invalid")
     calls = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -64,7 +66,9 @@ def test_grant_then_create_payment_request_shape():
     assert calls[1][2]["merchantInvoiceNumber"] == "MIOS-202608-ABC123"
 
 
-def test_gateway_error_status_raises():
+def test_gateway_error_status_raises(monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "api_public_base_url", "https://api.example.invalid")
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/token/grant"):
             return httpx.Response(200, json={"id_token": "t", "expires_in": 3600})
@@ -80,7 +84,7 @@ def test_gateway_error_status_raises():
 def test_execution_succeeded_interpretations():
     assert execution_succeeded({"transactionStatus": "Completed"})
     assert not execution_succeeded({"transactionStatus": "Initiated"})
-    assert execution_succeeded({"statusCode": "0000"})
+    assert not execution_succeeded({"statusCode": "0000"})
     assert not execution_succeeded({"statusCode": "5099"})
 
 

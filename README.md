@@ -1,4 +1,20 @@
-# MIOS — Manufacturing Intelligence OS
+# Lineora — Manufacturing intelligence
+
+**See the gap. Keep production moving.** Formerly MIOS; repository and API identifiers remain compatible.
+
+The September 2026 slice adds a React/Vite operations dashboard, submitted-record gap analysis,
+knowledge inbox and readiness dashboard, a read-only facility directory, Supabase authentication
+adapter, and a server-side Grok provider. Payment integrations are sandbox-only.
+
+**Release status: tested pilot code, not a verified production deployment.** Production records
+and activity are not yet durable. Connected Supabase schema reconciliation, runtime credentials,
+and access to the intended Vercel project are outstanding. Historical capability descriptions
+below include roadmap items; use the following documents as the current release contract:
+
+- [Audit and milestones](docs/06-LINEORA-AUDIT-AND-MILESTONES.md)
+- [Three dashboard layouts and brand](docs/07-LINEORA-DESIGN.md)
+- [Market, SaaS architecture and revenue experiments](docs/08-LINEORA-SaaS-AND-MARKET.md)
+- [Code contracts, Grok behavior and deployment runbook](docs/09-LINEORA-ENGINEERING.md)
 
 <p align="center">
   <strong>Turn factory data into decisions.</strong>
@@ -75,7 +91,7 @@ The goal is not another chatbot. The goal is an **operational intelligence syste
 
 ```mermaid
 flowchart TB
-    U[Factory Users] --> W[Next.js Web App]
+    U[Factory Users] --> W[React and Vite Web App]
     W --> API[FastAPI API]
 
     API --> AUTH[Authentication & Tenant Isolation]

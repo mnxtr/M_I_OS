@@ -17,8 +17,19 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
 
     # D-1 decision: OpenAI-primary. Falls back to extractive/local when no key set.
-    llm_provider: str = "openai"  # openai | anthropic | none
+    llm_provider: str = "openai"  # openai | anthropic | grok | none
     anthropic_api_key: str = ""
+    xai_api_key: str = ""
+    xai_model: str = ""  # Select an available Grok model in the xAI console.
+    auth_provider: str = "legacy"  # legacy | supabase; never auto-fallback between them
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+    dev_bootstrap_schema: bool = False
+    cors_origins: list[str] = []
+    payment_sandbox_enabled: bool = False
+    sslcommerz_store_id: str = ""
+    sslcommerz_store_password: str = ""
+    api_public_base_url: str = ""
 
     chunk_size: int = 1200
     chunk_overlap: int = 150

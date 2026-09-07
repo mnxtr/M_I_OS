@@ -212,7 +212,9 @@ def upload(
     doc_type: str = "other",
     department: str = "general",
 ) -> Document:
-    content = file.file.read()
+    content = file.file.read(20 * 1024 * 1024 + 1)
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Maximum file size is 20 MiB")
     return create_and_store_document(
         db=db,
         background=background,
@@ -227,4 +229,5 @@ def upload(
 
 @router.get("", response_model=list[DocumentOut])
 def list_documents(user: CurrentUser, db: DbDep) -> list[Document]:
-    return list(db.scalars(select(Document).order_by(Document.created_at.desc()).limit(200)))
+    return list(db.scalars(select(Document).where(Document.tenant_id == user.tenant_id)
+                           .order_by(Document.created_at.desc()).limit(200)))

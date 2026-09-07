@@ -1,6 +1,10 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CompliancePanel from "@/components/CompliancePanel";
+import KnowledgeDashboard from "@/components/KnowledgeDashboard";
+import KnowledgeInbox from "@/components/KnowledgeInbox";
+import OperationsDashboard from "@/components/OperationsDashboard";
+import FacilityPanel from "@/components/FacilityPanel";
 import LangToggle from "@/components/LangToggle";
 import {
   askStream,
@@ -17,6 +21,7 @@ import {
 } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useLang } from "@/lib/useLang";
+import { getAccessToken, signOut } from "@/lib/supabase";
 
 interface Message {
   role: "user" | "assistant";
@@ -43,13 +48,14 @@ export default function WorkspacePage() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [tab, setTab] = useState<Tab>("chat");
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [view, setView] = useState<"operations" | "knowledge" | "assistant" | "facilities">("operations");
+  const [activity, setActivity] = useState<{time: string; text: string}[]>([]);
+  function recordActivity(text: string) { setActivity(old => [{time:new Date().toISOString(), text}, ...old].slice(0, 50)); }
+  const [revision, setRevision] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!localStorage.getItem("mios_token")) {
-      router("/");
-      return;
-    }
+    void getAccessToken().then(token => { if (!token) router("/"); });
     refreshDocuments().catch(() => {});
     listTables()
       .then(setTables)
@@ -97,6 +103,8 @@ export default function WorkspacePage() {
     setBusy(true);
     try {
       await askStream(q, {
+        onCitations: (citations) => setMessages(m => m.map((message, i) =>
+          i === m.length - 1 ? { ...message, citations } : message)),
         onToken: (token) =>
           setMessages((m) => {
             const copy = [...m];
@@ -115,10 +123,12 @@ export default function WorkspacePage() {
         }
         return copy;
       });
+      recordActivity("Assistant response completed");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Query failed");
     } finally {
       setBusy(false);
+      setMessages(m => m.map(message => ({ ...message, streaming: false })));
     }
   }
 
@@ -137,8 +147,8 @@ export default function WorkspacePage() {
     }
   }
 
-  function logout() {
-    localStorage.removeItem("mios_token");
+  async function logout() {
+    await signOut();
     router("/");
   }
 
@@ -154,7 +164,7 @@ export default function WorkspacePage() {
           flexWrap: "wrap",
         }}
       >
-        <h1 style={{ fontSize: 22, margin: 0 }}>{tr.workspace}</h1>
+        <a className="brand" href="#/workspace"><span className="brand-mark">L</span>Lineora<span className="brand-subtitle">FACTORY INTELLIGENCE</span></a>
         {usage && <UsageBadge usage={usage} />}
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <LangToggle lang={lang} onChange={setLang} />
@@ -164,7 +174,16 @@ export default function WorkspacePage() {
         </span>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 20 }}>
+      <nav className="workspace-nav" aria-label="Workspace navigation">
+        <button className="btn btn-ghost" aria-current={view === "operations" ? "page" : undefined} onClick={() => setView("operations")}>{lang === "bn" ? "অপারেশনস" : "Operations"}</button>
+        <button className="btn btn-ghost" aria-current={view === "knowledge" ? "page" : undefined} onClick={() => setView("knowledge")}>{lang === "bn" ? "জ্ঞান ইনবক্স" : "Knowledge inbox"}</button>
+        <button className="btn btn-ghost" aria-current={view === "assistant" ? "page" : undefined} onClick={() => setView("assistant")}>{lang === "bn" ? "সহকারী ও টুলস" : "Assistant & tools"}</button>
+        <button className="btn btn-ghost" aria-current={view === "facilities" ? "page" : undefined} onClick={() => setView("facilities")}>Facilities</button>
+      </nav>
+      {view === "operations" && <><OperationsDashboard lang={lang} onKnowledge={() => setView("knowledge")} onActivity={recordActivity} /><section className="panel"><h3>Session activity</h3><p className="muted">Last 50 actions in this tab. Clears on refresh; not a durable audit log.</p>{activity.length === 0 ? <p>No completed actions in this session.</p> : <ol>{activity.map((a,i) => <li key={i}>{new Date(a.time).toLocaleTimeString("en-GB", {timeZone:"Asia/Dhaka"})} · {a.text}</li>)}</ol>}</section></>}
+      {view === "facilities" && <FacilityPanel />}
+      {view === "knowledge" && <><KnowledgeInbox lang={lang} onUploaded={() => { recordActivity("Knowledge file accepted for processing"); setRevision(x => x + 1); void refreshDocuments().catch(() => {}); }} /><KnowledgeDashboard lang={lang} revision={revision} /></>}
+      {view === "assistant" && <div className="assistant-grid">
         <section className="panel">
           <h2 style={{ marginTop: 0, fontSize: 16 }}>{tr.knowledgeBase}</h2>
           <input
@@ -388,7 +407,7 @@ export default function WorkspacePage() {
             </>
           )}
         </section>
-      </div>
+      </div>}
     </main>
   );
 }
@@ -406,12 +425,12 @@ function UsageBadge({ usage }: { usage: UsageInfo }) {
   return (
     <span
       className="muted"
-      title={`Estimated ${usage.estimated_minutes_saved} minutes of expert time saved this month`}
+      title="Current subscription query usage"
       style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}
     >
       <span className="badge">{usage.plan.name}</span>
       <span>
-        {used}/{unlimited ? "∞" : limit} queries · ~{usage.estimated_minutes_saved} min saved
+        {used}/{unlimited ? "∞" : limit} queries
       </span>
       {!unlimited && (
         <span
