@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens ported verbatim from the legacy `apps/web-legacy/src/styles/globals.css`
+ * palette so the rebuild is visually continuous with what the team already reviewed.
+ * Tailwind v4 is CSS-first: this @theme block replaces tailwind.config.js.
+ */
+@theme {
+  --color-bg: #0f1115;
+  --color-panel: #171a21;
+  --color-panel-raised: #1d212a;
+  --color-border: #2a2f3a;
+  --color-fg: #e8eaed;
+  --color-muted: #9aa3b2;
+  --color-accent: #4f8cff;
+  --color-accent-dark: #3a6fd8;
+  --color-danger: #e5544b;
+  --color-ok: #3fbf6f;
+  --color-warn: #e2b93b;
+
+  --font-sans: var(--font-inter), var(--font-noto-bengali), "Noto Sans", system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --radius-panel: 10px;
+}
+
+/*
+ * Bangla conjuncts (ক্ষ, ঙ্গ) and above/below marks (ঁ, ূ) clip at the Latin default
+ * line-height. 1.65 is the floor that keeps them intact; do not tighten globally.
+ */
+:root {
+  --leading-bengali: 1.65;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[lang="bn"] body {
+  line-height: var(--leading-bengali);
+}
+
+/* Focus ring: visible on every interactive element, accent-coloured, never removed. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Streaming answer caret. */
+@keyframes mios-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mios-caret::after {
+  content: "▌";
+  margin-left: 1px;
+  animation: mios-caret 1s step-end infinite;
+  color: var(--color-accent);
+}
+
+/* Scrollbars that do not fight the dark panel background. */
+* {
+  scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: thin;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

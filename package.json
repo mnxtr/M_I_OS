@@ -1,0 +1,20 @@
+{
+  "name": "mios",
+  "private": true,
+  "version": "0.3.0",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace mios-web",
+    "build": "npm run build --workspace mios-web",
+    "start": "npm run start --workspace mios-web",
+    "lint": "npm run lint --workspace mios-web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

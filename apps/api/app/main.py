@@ -12,6 +12,7 @@ from app.routers import (
     chat,
     compliance,
     connectors,
+    dashboard,
     documents,
     guest,
     payments,
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router)
     app.include_router(chat.router)
     app.include_router(analytics.router)
+    app.include_router(dashboard.router)
     app.include_router(compliance.router)
     app.include_router(guest.router)
     app.include_router(tenant.router)
