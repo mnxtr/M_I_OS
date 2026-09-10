@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { TemplateInfo } from "@mios/shared";
-import { createAssessment } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
+import { createComplianceAssessment } from "@/lib/compliance/client";
 import { ApiError } from "@/lib/api/fetcher";
 import { useT } from "@/lib/i18n/useT";
 import { Button } from "@/components/ui/button";
@@ -27,11 +26,7 @@ export function CreateAssessmentForm({ templates }: { templates: TemplateInfo[] 
     setBusy(true);
     setError("");
     try {
-      const token = await getClientToken();
-      const created = await createAssessment(
-        { token },
-        { template_code: templateCode, title: title.trim(), due_date: dueDate },
-      );
+      const created = await createComplianceAssessment({ template_code: templateCode, title: title.trim(), due_date: dueDate });
       setTitle("");
       setDueDate("");
       toast.success(created.title);

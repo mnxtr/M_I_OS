@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function Panel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("rounded-panel border border-border bg-panel p-5", className)}
+      className={cn("mios-panel rounded-panel p-5", className)}
       {...props}
     />
   );
@@ -16,7 +16,7 @@ export function PanelHeader({ className, ...props }: React.ComponentProps<"div">
 }
 
 export function PanelTitle({ className, ...props }: React.ComponentProps<"h2">) {
-  return <h2 className={cn("text-base font-semibold text-fg", className)} {...props} />;
+  return <h2 className={cn("text-base font-semibold tracking-[-0.02em] text-fg", className)} {...props} />;
 }
 
 export function PanelDescription({ className, ...props }: React.ComponentProps<"p">) {
@@ -24,7 +24,7 @@ export function PanelDescription({ className, ...props }: React.ComponentProps<"
 }
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+  "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em]",
   {
     variants: {
       tone: {

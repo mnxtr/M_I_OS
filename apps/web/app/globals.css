@@ -6,23 +6,27 @@
  * Tailwind v4 is CSS-first: this @theme block replaces tailwind.config.js.
  */
 @theme {
-  --color-bg: #0f1115;
-  --color-panel: #171a21;
-  --color-panel-raised: #1d212a;
-  --color-border: #2a2f3a;
-  --color-fg: #e8eaed;
-  --color-muted: #9aa3b2;
-  --color-accent: #4f8cff;
-  --color-accent-dark: #3a6fd8;
-  --color-danger: #e5544b;
-  --color-ok: #3fbf6f;
-  --color-warn: #e2b93b;
+  --color-bg: #071013;
+  --color-panel: #0d191d;
+  --color-panel-raised: #132328;
+  --color-border: #20363b;
+  --color-fg: #f0f7f6;
+  --color-muted: #8fa7aa;
+  --color-accent: #73f6d2;
+  --color-accent-dark: #4bd6b4;
+  --color-danger: #ff6b66;
+  --color-ok: #73f6d2;
+  --color-warn: #f2bf63;
+  --color-info: #94c8ed;
+  --color-ink: #05090b;
+  --color-line: #173036;
 
   --font-sans: var(--font-inter), var(--font-noto-bengali), "Noto Sans", system-ui,
     -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
-  --radius-panel: 10px;
+  --font-display: var(--font-inter), var(--font-noto-bengali), system-ui, sans-serif;
+  --radius-panel: 14px;
 }
 
 /*
@@ -40,15 +44,116 @@
 
 html {
   background: var(--color-bg);
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  background: var(--color-ink);
   color: var(--color-fg);
   font-family: var(--font-sans);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: var(--color-fg);
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease,
+    box-shadow 180ms ease, transform 180ms ease;
+}
+
+.mios-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.055em;
+}
+
+.mios-eyebrow {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.mios-grid-surface {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg);
+}
+
+.mios-grid-surface::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.35;
+  background-image: linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+.mios-topline {
+  border-top: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+.mios-panel {
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  background: color-mix(in srgb, var(--color-panel) 92%, transparent);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.14);
+}
+
+.mios-panel:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+}
+
+.mios-hero-image {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.mios-hero-image::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(90deg, var(--color-bg) 0%, rgb(7 16 19 / 0.78) 30%, rgb(7 16 19 / 0.12) 100%);
+}
+
+.mios-signal-dot {
+  display: inline-block;
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
+.mios-signal-dot[data-tone="danger"] {
+  background: var(--color-danger);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-danger) 50%, transparent);
+}
+
+.mios-signal-dot[data-tone="warn"] {
+  background: var(--color-warn);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-warn) 45%, transparent);
 }
 
 html[lang="bn"] body {
@@ -78,6 +183,22 @@ html[lang="bn"] body {
   margin-left: 1px;
   animation: mios-caret 1s step-end infinite;
   color: var(--color-accent);
+}
+
+@keyframes mios-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.mios-live-dot {
+  animation: mios-pulse 2.2s ease-in-out infinite;
 }
 
 /* Scrollbars that do not fight the dark panel background. */

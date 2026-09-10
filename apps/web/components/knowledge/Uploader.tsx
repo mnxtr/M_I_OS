@@ -4,8 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
-import { registerDocument } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
 import { ApiError } from "@/lib/api/fetcher";
 import { useT } from "@/lib/i18n/useT";
 import { formatBytes } from "@/lib/format";
@@ -73,11 +71,28 @@ export function Uploader() {
 
         patch(id, { state: "registering", percent: 100 });
 
-        const token = await getClientToken();
-        await registerDocument(
-          { token },
-          { storage_path: path, filename: file.name },
-        );
+        const registerRes = await fetch("/api/documents/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storage_path: path, filename: file.name }),
+        });
+        if (!registerRes.ok) {
+          const body = await registerRes.json().catch(() => ({}));
+          throw new ApiError(
+            typeof body.detail === "string" ? body.detail : `Registration failed (${registerRes.status})`,
+            registerRes.status,
+          );
+        }
+
+        const document = (await registerRes.json()) as { id: string };
+        const processRes = await fetch(`/api/documents/${document.id}/process`, { method: "POST" });
+        if (!processRes.ok) {
+          const body = await processRes.json().catch(() => ({}));
+          throw new ApiError(
+            typeof body.detail === "string" ? body.detail : `Processing failed (${processRes.status})`,
+            processRes.status,
+          );
+        }
 
         patch(id, { state: "done" });
         router.refresh();

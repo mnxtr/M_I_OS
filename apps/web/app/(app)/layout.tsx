@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="min-h-dvh bg-ink">
       <LangMigration />
       <a
         href="#content"
@@ -32,15 +32,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <TenantHeader email={claims.email} role={claims.role} usage={usage} />
 
-      <div className="flex flex-1 flex-col lg:flex-row">
-        <div className="overflow-x-auto border-b border-border p-2 lg:w-56 lg:shrink-0 lg:overflow-visible lg:border-b-0 lg:border-r lg:p-4">
+      <div className="flex min-h-[calc(100dvh-73px)] flex-col lg:flex-row">
+        <div className="overflow-x-auto border-b border-line p-2 lg:w-64 lg:shrink-0 lg:overflow-visible lg:border-b-0 lg:border-r lg:p-4">
           <Sidebar
             role={claims.role}
             showQuality={process.env.NEXT_PUBLIC_FEATURE_QUALITY === "true"}
           />
         </div>
 
-        <main id="content" className="min-w-0 flex-1 p-4 lg:p-6">
+        <main id="content" className="min-w-0 flex-1 bg-bg/45 p-4 lg:p-8">
           {children}
         </main>
       </div>

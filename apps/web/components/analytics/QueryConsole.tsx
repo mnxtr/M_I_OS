@@ -3,9 +3,6 @@
 import { useState } from "react";
 import { Send } from "lucide-react";
 import type { QueryResult, TableInfo } from "@mios/shared";
-import { runQuery } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
-import { ApiError } from "@/lib/api/fetcher";
 import { useT } from "@/lib/i18n/useT";
 import { formatInteger } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -36,8 +33,14 @@ export function QueryConsole({ tables }: { tables: TableInfo[] }) {
     setBusy(true);
     setError("");
     try {
-      const token = await getClientToken();
-      setResult(await runQuery({ token }, trimmed, tableId || null));
+      const response = await fetch("/api/analytics/query", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question: trimmed, table_id: tableId || null }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || t.common.unknownError);
+      setResult(payload as QueryResult);
     } catch (cause) {
       setResult(null);
       setError(guardrailMessage(cause));
@@ -48,8 +51,7 @@ export function QueryConsole({ tables }: { tables: TableInfo[] }) {
 
   /** Turn the API's guardrail failures into copy a production manager can act on. */
   function guardrailMessage(cause: unknown): string {
-    if (!(cause instanceof ApiError)) return t.common.unknownError;
-    const detail = cause.message.toLowerCase();
+    const detail = cause instanceof Error ? cause.message.toLowerCase() : "";
     if (detail.includes("timeout") || detail.includes("canceling statement")) {
       return t.analytics.errorTimeout;
     }
@@ -57,15 +59,14 @@ export function QueryConsole({ tables }: { tables: TableInfo[] }) {
       return t.analytics.errorNoTable;
     }
     if (
-      cause.status === 400 ||
-      cause.status === 422 ||
+      detail.includes("invalid") ||
       detail.includes("reject") ||
       detail.includes("not allowed") ||
       detail.includes("read-only")
     ) {
       return t.analytics.errorRejected;
     }
-    return cause.localized(t);
+      return cause instanceof Error ? cause.message : t.common.unknownError;
   }
 
   return (

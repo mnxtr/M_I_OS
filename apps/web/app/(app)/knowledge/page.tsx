@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireClaims, getAccessToken } from "@/lib/supabase/claims";
-import { listDocumentsServer, listTablesServer } from "@/lib/api";
+import { requireClaims } from "@/lib/supabase/claims";
+import { listDocumentsSupabase, listTablesSupabase } from "@/lib/knowledge/supabase";
 import { getServerT } from "@/lib/i18n";
 import { Uploader } from "@/components/knowledge/Uploader";
 import { DocumentTable } from "@/components/knowledge/DocumentTable";
@@ -24,21 +24,18 @@ type Props = { searchParams: Promise<{ tab?: string }> };
 
 export default async function KnowledgePage({ searchParams }: Props) {
   const [{ t }, params] = await Promise.all([getServerT(), searchParams, requireClaims()]);
-  const token = await getAccessToken();
 
   let documents: DocumentRecord[] = [];
   let tables: TableInfo[] = [];
   let error = "";
-  if (token) {
-    const [documentResult, tableResult] = await Promise.allSettled([
-      listDocumentsServer({ token }),
-      listTablesServer({ token }),
-    ]);
-    if (documentResult.status === "fulfilled") documents = documentResult.value;
-    if (tableResult.status === "fulfilled") tables = tableResult.value;
-    if (documentResult.status === "rejected" || tableResult.status === "rejected") {
-      error = t.common.networkError;
-    }
+  const [documentResult, tableResult] = await Promise.allSettled([
+    listDocumentsSupabase(),
+    listTablesSupabase(),
+  ]);
+  if (documentResult.status === "fulfilled") documents = documentResult.value;
+  if (tableResult.status === "fulfilled") tables = tableResult.value;
+  if (documentResult.status === "rejected" || tableResult.status === "rejected") {
+    error = t.common.networkError;
   }
 
   const defaultTab = ["documents", "uploads", "tables", "failed"].includes(params.tab ?? "")

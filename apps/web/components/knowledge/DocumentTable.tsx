@@ -8,8 +8,6 @@ import { toast } from "sonner";
 import type { DocumentRecord } from "@mios/shared";
 import { useT } from "@/lib/i18n/useT";
 import { formatInteger, formatRelative } from "@/lib/format";
-import { deleteDocument, reingestDocument } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
 import { ApiError } from "@/lib/api/fetcher";
 import { Input, Select } from "@/components/ui/input";
 import {
@@ -60,8 +58,8 @@ export function DocumentTable({ documents }: { documents: DocumentRecord[] }) {
   async function onReingest(doc: DocumentRecord) {
     setPendingId(doc.id);
     try {
-      const token = await getClientToken();
-      await reingestDocument({ token }, doc.id);
+      const response = await fetch(`/api/documents/${doc.id}/process`, { method: "POST" });
+      if (!response.ok) throw new ApiError((await response.json().catch(() => ({}))).detail || "Could not process document", response.status);
       toast.success(t.knowledge.processing);
       router.refresh();
     } catch (cause) {
@@ -75,8 +73,8 @@ export function DocumentTable({ documents }: { documents: DocumentRecord[] }) {
     if (!window.confirm(t.knowledge.deleteConfirm(doc.filename))) return;
     setPendingId(doc.id);
     try {
-      const token = await getClientToken();
-      await deleteDocument({ token }, doc.id);
+      const response = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+      if (!response.ok) throw new ApiError((await response.json().catch(() => ({}))).detail || "Could not delete document", response.status);
       router.refresh();
     } catch (cause) {
       toast.error(cause instanceof ApiError ? cause.localized(t) : t.common.unknownError);

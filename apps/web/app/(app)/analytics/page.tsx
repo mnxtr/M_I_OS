@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireClaims, getAccessToken } from "@/lib/supabase/claims";
-import { listTablesServer } from "@/lib/api";
+import { requireClaims } from "@/lib/supabase/claims";
+import { listTablesSupabase } from "@/lib/knowledge/supabase";
 import { getServerT } from "@/lib/i18n";
 import { QueryConsole } from "@/components/analytics/QueryConsole";
 import { FeatureTabs, TabsContent } from "@/components/navigation/FeatureTabs";
@@ -15,16 +15,12 @@ type Props = { searchParams: Promise<{ tab?: string }> };
 
 export default async function AnalyticsPage({ searchParams }: Props) {
   const [{ t }, params] = await Promise.all([getServerT(), searchParams, requireClaims()]);
-  const token = await getAccessToken();
-
   let tables: TableInfo[] = [];
   let error = "";
-  if (token) {
-    try {
-      tables = await listTablesServer({ token });
-    } catch {
-      error = t.common.networkError;
-    }
+  try {
+    tables = await listTablesSupabase();
+  } catch {
+    error = t.common.networkError;
   }
 
   const defaultTab = ["query", "dashboards", "tables", "saved"].includes(params.tab ?? "")

@@ -10,8 +10,6 @@ import type {
   DashboardTrendPoint,
   ProductionLineMetric,
 } from "@mios/shared";
-import { fetchDashboardSummary } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
 import { ApiError } from "@/lib/api/fetcher";
 import { formatInteger, formatRelative } from "@/lib/format";
 import { useT } from "@/lib/i18n/useT";
@@ -39,6 +37,29 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/primitives";
 
+async function fetchDashboardSummaryLocal(filters: DashboardFilters) {
+  const params = new URLSearchParams({
+    range_days: String(filters.range_days),
+    line: filters.line,
+    department: filters.department,
+    status: filters.status,
+  });
+  const response = await fetch(`/api/dashboard/summary?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (typeof body?.detail === "string") message = body.detail;
+    } catch {
+      // Keep the status-based message.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return (await response.json()) as DashboardSummary;
+}
+
 export function DashboardWorkspace({ initialSummary }: { initialSummary: DashboardSummary }) {
   const { t, lang } = useT();
   const [summary, setSummary] = React.useState(initialSummary);
@@ -50,8 +71,7 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
     setBusy(true);
     setError("");
     try {
-      const token = await getClientToken();
-      const next = await fetchDashboardSummary({ token }, nextFilters);
+      const next = await fetchDashboardSummaryLocal(nextFilters);
       setSummary(next);
       setFilters(next.filters);
     } catch (cause) {
@@ -72,7 +92,7 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
 
   return (
     <div className="grid gap-5">
-      <Panel>
+      <Panel className="border-line/80 bg-panel/80">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <PanelTitle>{t.dashboard.filters}</PanelTitle>
@@ -139,7 +159,7 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
 
       {busy ? <DashboardSkeleton /> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title={t.dashboard.output} value={formatInteger(production.output_qty, lang)} detail={t.dashboard.target(formatInteger(production.target_qty, lang))} />
         <MetricCard title={t.dashboard.downtime} value={formatInteger(production.downtime_min, lang)} detail={t.dashboard.minutes} tone="warn" />
         <MetricCard title={t.dashboard.defectRate} value={`${production.defect_rate}%`} detail={t.dashboard.defects(formatInteger(production.defects, lang))} tone={production.defect_rate > 2 ? "danger" : "ok"} />
@@ -147,7 +167,7 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Panel>
+        <Panel className="mios-grid-surface min-h-[380px]">
           <PanelHeader>
             <div>
               <PanelTitle>{t.dashboard.productionTrend}</PanelTitle>
@@ -156,13 +176,13 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
             <Badge tone="accent">{summary.analytics.table_count} {t.analytics.tablesAvailable.toLowerCase()}</Badge>
           </PanelHeader>
           {production.trend.length > 0 ? (
-            <TrendChart points={production.trend} />
+            production.trend.length >= 8 ? <TrendChart points={production.trend} /> : <ProductionBars points={production.trend} />
           ) : (
             <EmptyState className="border-0 py-10" title={t.dashboard.noProductionData} body={t.analytics.emptyBody} />
           )}
         </Panel>
 
-        <Panel>
+        <Panel className="min-h-[380px]">
           <PanelHeader>
             <div>
               <PanelTitle>{t.dashboard.outputByLine}</PanelTitle>
@@ -175,6 +195,28 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
             <EmptyState className="border-0 py-10" title={t.dashboard.noLineData} body={t.analytics.emptyBody} />
           )}
         </Panel>
+      </div>
+
+      <Panel className="border-accent/30 bg-panel/90">
+        <PanelHeader>
+          <div>
+            <PanelTitle>{t.dashboard.knowledgeAnalysis}</PanelTitle>
+            <PanelDescription>{t.dashboard.knowledgeAnalysisBody}</PanelDescription>
+          </div>
+          <Badge tone="accent">{summary.knowledge.analyzed_documents}/{summary.knowledge.total_documents}</Badge>
+        </PanelHeader>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard title={t.dashboard.indexedChunks} value={formatInteger(summary.knowledge.total_chunks, lang)} detail={t.dashboard.documentsAnalyzed} tone="accent" />
+          <MetricCard title={t.dashboard.insightCoverage} value={`${summary.knowledge.insight_coverage}%`} detail={`${formatInteger(summary.knowledge.analyzed_documents, lang)} ${t.dashboard.documentsAnalyzed.toLowerCase()}`} tone={summary.knowledge.insight_coverage === 100 ? "ok" : "warn"} />
+          <MetricCard title={t.dashboard.pagesAnalyzed} value={formatInteger(summary.knowledge.page_count, lang)} detail={t.dashboard.knowledgeHealth} />
+          <MetricCard title={t.dashboard.documentsAnalyzed} value={formatInteger(summary.knowledge.analyzed_documents, lang)} detail={t.knowledge.ready} tone="ok" />
+        </div>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <BreakdownCard title={t.dashboard.documentTypes} items={summary.knowledge.type_breakdown} empty={t.knowledge.emptyBody} />
+        <BreakdownCard title={t.dashboard.topTopics} items={summary.knowledge.topic_breakdown} empty={t.knowledge.emptyBody} />
+        <BreakdownCard title={t.dashboard.aiModels} items={summary.knowledge.model_breakdown} empty={t.knowledge.emptyBody} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -214,13 +256,21 @@ export function DashboardWorkspace({ initialSummary }: { initialSummary: Dashboa
 }
 
 function MetricCard({ title, value, detail, tone = "neutral" }: { title: string; value: string; detail: string; tone?: "neutral" | "ok" | "warn" | "danger" | "accent" }) {
+  const toneClass = {
+    neutral: "border-t-border",
+    ok: "border-t-ok",
+    warn: "border-t-warn",
+    danger: "border-t-danger",
+    accent: "border-t-accent",
+  }[tone];
+
   return (
-    <Panel className="grid gap-2">
+    <Panel className={`grid gap-3 border-t-2 ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted">{title}</p>
-        <Badge tone={tone}>&nbsp;</Badge>
+        <p className="mios-eyebrow text-muted">{title}</p>
+        <span className="mios-signal-dot" data-tone={tone === "danger" ? "danger" : tone === "warn" ? "warn" : undefined} />
       </div>
-      <p className="text-3xl font-semibold text-fg">{value}</p>
+      <p className="mios-display text-3xl font-semibold text-fg">{value}</p>
       <p className="text-xs text-muted">{detail}</p>
     </Panel>
   );
@@ -250,6 +300,30 @@ function TrendChart({ points }: { points: DashboardTrendPoint[] }) {
         <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-accent" />Output</span>
         <span className="inline-flex items-center gap-1"><span className="size-2 rounded-full bg-muted" />Target</span>
       </div>
+    </div>
+  );
+}
+
+function ProductionBars({ points }: { points: DashboardTrendPoint[] }) {
+  const { t, lang } = useT();
+  const max = Math.max(1, ...points.flatMap((point) => [point.output_qty, point.target_qty]));
+  return (
+    <div className="grid gap-4">
+      <Muted>{t.dashboard.smallSample}</Muted>
+      {points.map((point) => (
+        <div key={point.date} className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-fg">{point.date}</span>
+            <span className="text-muted">{formatInteger(point.output_qty, lang)} / {formatInteger(point.target_qty, lang)}</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-border">
+            <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(3, (point.output_qty / max) * 100)}%` }} />
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-border">
+            <div className="h-full rounded-full bg-muted" style={{ width: `${Math.max(3, (point.target_qty / max) * 100)}%` }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

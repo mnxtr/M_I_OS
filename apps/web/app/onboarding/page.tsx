@@ -24,13 +24,15 @@ export default async function OnboardingPage() {
   const suggestedName = claims.user_metadata?.pending_company_name ?? "";
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-6 py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <span className="text-lg font-semibold text-fg">{t.brand.name}</span>
+    <div className="mios-grid-surface min-h-dvh bg-ink px-5 py-8 sm:px-6 sm:py-12">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-6rem)] max-w-md flex-col">
+      <div className="mb-8 flex items-center justify-between">
+        <span className="flex items-center gap-3 text-sm font-bold tracking-[0.2em] text-fg"><span className="grid size-9 place-items-center rounded-lg border border-accent/40 bg-panel text-accent">M</span>{t.brand.name}</span>
         <LangToggle />
       </div>
       <OnboardingForm suggestedName={suggestedName} />
       <p className="mt-4 text-sm text-muted">{t.onboarding.uploadPrompt}</p>
+      </div>
     </div>
   );
 }

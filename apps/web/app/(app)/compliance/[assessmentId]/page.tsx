@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { requireClaims, getAccessToken } from "@/lib/supabase/claims";
-import { getAssessmentItemsServer, listAssessmentsServer } from "@/lib/api";
+import { requireClaims } from "@/lib/supabase/claims";
+import { getComplianceAssessmentSupabase } from "@/lib/compliance/supabase";
 import { getServerT, getLang } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
 import { AssessmentWorkspace } from "@/components/compliance/AssessmentWorkspace";
@@ -22,15 +22,8 @@ export default async function AssessmentPage({
     params,
     requireClaims(),
   ]);
-  const token = await getAccessToken();
-  if (!token) notFound();
-
-  const [assessmentsResult, itemsResult] = await Promise.allSettled([
-    listAssessmentsServer({ token }),
-    getAssessmentItemsServer({ token }, assessmentId),
-  ]);
-
-  if (assessmentsResult.status === "rejected" || itemsResult.status === "rejected") {
+  const result = await getComplianceAssessmentSupabase(assessmentId).catch(() => undefined);
+  if (result === undefined) {
     return (
       <div className="mx-auto max-w-5xl">
         <ErrorBanner>{t.common.networkError}</ErrorBanner>
@@ -38,8 +31,8 @@ export default async function AssessmentPage({
     );
   }
 
-  const assessment = assessmentsResult.value.find((entry) => entry.id === assessmentId);
-  if (!assessment) notFound();
+  if (!result) notFound();
+  const { assessment, items } = result;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -61,7 +54,7 @@ export default async function AssessmentPage({
         </p>
       </div>
 
-      <AssessmentWorkspace assessment={assessment} initialItems={itemsResult.value} />
+      <AssessmentWorkspace assessment={assessment} initialItems={items} />
     </div>
   );
 }

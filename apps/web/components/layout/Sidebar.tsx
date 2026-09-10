@@ -52,7 +52,9 @@ export function Sidebar({ role, showQuality }: { role: UserRole; showQuality: bo
   const visible = items.filter((item) => !item.roles || item.roles.includes(role));
 
   return (
-    <nav aria-label={t.a11y.mainNavigation} className="flex gap-1 lg:flex-col">
+    <nav aria-label={t.a11y.mainNavigation} className="flex gap-1 lg:flex-col lg:gap-7">
+      <div className="hidden px-3 lg:block"><p className="mios-eyebrow">workspace</p><p className="mt-2 truncate text-sm font-semibold text-fg">Aster Textiles</p><p className="mt-1 text-xs text-muted">Plant 1 · Live operations</p></div>
+      <div className="hidden px-3 lg:block"><p className="mios-eyebrow">navigate</p></div>
       {visible.map((item) => {
         const active =
           pathname === item.href ||
@@ -65,13 +67,13 @@ export function Sidebar({ role, showQuality }: { role: UserRole; showQuality: bo
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+              "group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-sm transition-colors",
               active
-                ? "bg-panel-raised text-accent"
-                : "text-muted hover:bg-panel-raised/60 hover:text-fg",
+                ? "border-accent/20 bg-panel-raised text-accent shadow-[inset_2px_0_0_var(--color-accent)]"
+                : "text-muted hover:border-line hover:bg-panel-raised/60 hover:text-fg",
             )}
           >
-            <Icon className="size-4 shrink-0" />
+            <Icon className={cn("size-4 shrink-0", active ? "text-accent" : "text-muted group-hover:text-accent")} />
             <span className="whitespace-nowrap">{item.label}</span>
           </Link>
         );

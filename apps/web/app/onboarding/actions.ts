@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   name: z.string().trim().min(2).max(200),
@@ -45,6 +46,21 @@ export async function onboardFactory(input: {
     return { ok: false, error: "failed" };
   }
   if (typeof data !== "string") return { ok: false, error: "failed" };
+
+  // Keep the session claim in sync with the profile row. The access-token hook should
+  // derive this from profiles, but syncing app_metadata here also makes the handoff
+  // deterministic when a project has not enabled that hook yet.
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) return { ok: false, error: "failed" };
+
+  const admin = createAdminClient();
+  const { error: metadataError } = await admin.auth.admin.updateUserById(userData.user.id, {
+    app_metadata: {
+      ...userData.user.app_metadata,
+      tenant_id: data,
+    },
+  });
+  if (metadataError) return { ok: false, error: "failed" };
 
   return { ok: true, tenantId: data };
 }

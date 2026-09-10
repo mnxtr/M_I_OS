@@ -7,15 +7,16 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const { t } = await getServerT();
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="mios-grid-surface flex min-h-dvh flex-col bg-ink">
       <LangMigration />
-      <header className="flex items-center justify-between px-6 py-4">
-        <Link href="/" className="text-lg font-semibold text-fg">
-          {t.brand.name}
+      <header className="relative z-10 flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
+        <Link href="/" className="flex items-center gap-3 text-fg">
+          <span className="grid size-9 place-items-center rounded-lg border border-accent/40 bg-panel text-sm font-bold text-accent">M</span>
+          <span><span className="block text-sm font-bold tracking-[0.2em]">{t.brand.name}</span><span className="hidden text-[0.58rem] uppercase tracking-[0.18em] text-muted sm:block">manufacturing intelligence</span></span>
         </Link>
         <LangToggle />
       </header>
-      <main className="flex flex-1 items-start justify-center px-6 pb-16 pt-4 sm:pt-10">
+      <main className="relative z-10 flex flex-1 items-start justify-center px-5 pb-16 pt-8 sm:px-6 sm:pt-16">
         <div className="w-full max-w-md">{children}</div>
       </main>
     </div>

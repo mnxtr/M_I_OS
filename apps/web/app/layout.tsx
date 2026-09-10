@@ -26,13 +26,13 @@ export const metadata: Metadata = {
     template: "%s · MIOS",
   },
   description:
-    "Turn factory data into decisions. Ask your factory anything and get answers grounded in your own documents.",
+    "Turn factory signals into decisions. MIOS connects production data, documents, quality records, and compliance evidence in one intelligence layer.",
   applicationName: "MIOS",
   robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f1115",
+  themeColor: "#071013",
   width: "device-width",
   initialScale: 1,
 };

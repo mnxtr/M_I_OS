@@ -240,8 +240,14 @@ export interface KnowledgeDashboardMetrics {
   processing_documents: number;
   failed_documents: number;
   page_count: number;
+  total_chunks: number;
+  analyzed_documents: number;
+  insight_coverage: number;
   status_breakdown: DashboardStatusBreakdown[];
   department_breakdown: DashboardStatusBreakdown[];
+  type_breakdown: DashboardStatusBreakdown[];
+  topic_breakdown: DashboardStatusBreakdown[];
+  model_breakdown: DashboardStatusBreakdown[];
   recent_documents: DocumentRecord[];
 }
 
@@ -293,4 +299,3 @@ export interface DashboardSummary {
   quality: QualityDashboardMetrics;
   usage: UsageInfo | null;
 }
-

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireClaims, getAccessToken } from "@/lib/supabase/claims";
-import { listAssessmentsServer, listTemplatesServer } from "@/lib/api";
+import { requireClaims } from "@/lib/supabase/claims";
+import { listComplianceAssessmentsSupabase, listComplianceTemplatesSupabase } from "@/lib/compliance/supabase";
 import { getServerT, getLang } from "@/lib/i18n";
 import { formatDate, formatInteger } from "@/lib/format";
 import { CreateAssessmentForm } from "@/components/compliance/CreateAssessmentForm";
@@ -17,22 +17,19 @@ type Props = { searchParams: Promise<{ tab?: string }> };
 
 export default async function CompliancePage({ searchParams }: Props) {
   const [{ t }, lang, params] = await Promise.all([getServerT(), getLang(), searchParams, requireClaims()]);
-  const token = await getAccessToken();
 
   let templates: TemplateInfo[] = [];
   let assessments: AssessmentInfo[] = [];
   let error = "";
 
-  if (token) {
-    const [templateResult, assessmentResult] = await Promise.allSettled([
-      listTemplatesServer({ token }),
-      listAssessmentsServer({ token }),
-    ]);
-    if (templateResult.status === "fulfilled") templates = templateResult.value;
-    if (assessmentResult.status === "fulfilled") assessments = assessmentResult.value;
-    if (templateResult.status === "rejected" || assessmentResult.status === "rejected") {
-      error = t.common.networkError;
-    }
+  const [templateResult, assessmentResult] = await Promise.allSettled([
+    listComplianceTemplatesSupabase(),
+    listComplianceAssessmentsSupabase(),
+  ]);
+  if (templateResult.status === "fulfilled") templates = templateResult.value;
+  if (assessmentResult.status === "fulfilled") assessments = assessmentResult.value;
+  if (templateResult.status === "rejected" || assessmentResult.status === "rejected") {
+    error = t.common.networkError;
   }
 
   const defaultTab = ["assessments", "gaps", "caps", "binders"].includes(params.tab ?? "")
@@ -135,4 +132,3 @@ function AssessmentList({
     </Panel>
   );
 }
-

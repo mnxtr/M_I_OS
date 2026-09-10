@@ -2,8 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { Citation, ChatFrame } from "@mios/shared";
-import { chatStream } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
 import { sseFrames } from "@/lib/api/sse";
 import { ApiError } from "@/lib/api/fetcher";
 import { useT } from "@/lib/i18n/useT";
@@ -21,9 +19,8 @@ export interface ChatMessage {
 /**
  * Chat state and the streaming call.
  *
- * The browser talks to FastAPI directly rather than proxying through a Vercel route
- * handler — a grounded answer can take tens of seconds, and function duration limits
- * would truncate it mid-sentence.
+ * The browser talks to a same-origin route. The Groq credential and Supabase queries
+ * therefore remain server-side.
  */
 export function useChat() {
   const { t } = useT();
@@ -60,8 +57,8 @@ export function useChat() {
         );
 
       try {
-        const token = await getClientToken();
-        const response = await chatStream({ token }, trimmed, controller.signal);
+        const response = await fetch("/api/chat/stream", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: trimmed }), signal: controller.signal });
+        if (!response.ok) throw new ApiError((await response.text()) || "Chat request failed", response.status);
 
         for await (const frame of sseFrames<ChatFrame>(response)) {
           if (frame.type === "citations") {

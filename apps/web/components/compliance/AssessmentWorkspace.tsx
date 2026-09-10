@@ -11,8 +11,7 @@ import {
   type AutoAssessFrame,
   type ItemStatus,
 } from "@mios/shared";
-import { autoAssessStream, draftCap, updateAssessmentItem } from "@/lib/api";
-import { getClientToken } from "@/lib/api/token";
+import { autoAssessCompliance, draftComplianceCap, updateComplianceItem } from "@/lib/compliance/client";
 import { sseFrames } from "@/lib/api/sse";
 import { ApiError } from "@/lib/api/fetcher";
 import { useT } from "@/lib/i18n/useT";
@@ -69,8 +68,7 @@ export function AssessmentWorkspace({
     setAssessed(0);
     setTotal(0);
     try {
-      const token = await getClientToken();
-      const response = await autoAssessStream({ token }, assessment.id);
+      const response = await autoAssessCompliance(assessment.id);
 
       for await (const frame of sseFrames<AutoAssessFrame>(response)) {
         if (frame.type === "start") {
@@ -104,8 +102,7 @@ export function AssessmentWorkspace({
 
   async function onStatusChange(item: AssessmentItemRecord, status: ItemStatus) {
     try {
-      const token = await getClientToken();
-      const updated = await updateAssessmentItem({ token }, item.id, { status });
+      const updated = await updateComplianceItem(item.id, { status });
       // The API preserves evidence but does not return it on PATCH — keep what we have.
       patchItem(item.id, {
         status: updated.status,
@@ -119,8 +116,7 @@ export function AssessmentWorkspace({
 
   async function onClearOverride(item: AssessmentItemRecord) {
     try {
-      const token = await getClientToken();
-      const updated = await updateAssessmentItem({ token }, item.id, { manually_set: false });
+      const updated = await updateComplianceItem(item.id, { manually_set: false });
       patchItem(item.id, { manually_set: updated.manually_set });
       toast.success(t.compliance.clearOverride);
     } catch (cause) {
@@ -130,8 +126,7 @@ export function AssessmentWorkspace({
 
   async function onDraftCap(item: AssessmentItemRecord) {
     try {
-      const token = await getClientToken();
-      const updated = await draftCap({ token }, item.id);
+      const updated = await draftComplianceCap(item.id);
       patchItem(item.id, { cap_text: updated.cap_text });
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.localized(t) : t.common.unknownError);
@@ -140,8 +135,7 @@ export function AssessmentWorkspace({
 
   async function onSaveCap(item: AssessmentItemRecord, text: string) {
     try {
-      const token = await getClientToken();
-      await updateAssessmentItem({ token }, item.id, { cap_text: text });
+      await updateComplianceItem(item.id, { cap_text: text });
       patchItem(item.id, { cap_text: text });
       toast.success(t.common.saved);
     } catch (cause) {
@@ -152,8 +146,7 @@ export function AssessmentWorkspace({
   async function onBinder() {
     setBinderBusy(true);
     try {
-      // The route handler asks the API to write the ZIP to Storage and returns a signed
-      // URL, so a large binder never streams through Vercel.
+      // The authenticated route returns a portable Markdown evidence binder.
       window.location.href = `/api/binder/${assessment.id}`;
     } finally {
       setTimeout(() => setBinderBusy(false), 2000);

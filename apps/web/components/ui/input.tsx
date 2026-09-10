@@ -6,8 +6,8 @@ export const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"in
     <input
       ref={ref}
       className={cn(
-        "h-10 w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg",
-        "placeholder:text-muted focus-visible:border-accent focus-visible:outline-none",
+        "h-10 w-full rounded-lg border border-border bg-bg/80 px-3 py-2 text-sm text-fg",
+        "placeholder:text-muted focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/10",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -22,8 +22,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentPro
     <textarea
       ref={ref}
       className={cn(
-        "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg",
-        "placeholder:text-muted focus-visible:border-accent focus-visible:outline-none",
+        "w-full rounded-lg border border-border bg-bg/80 px-3 py-2 text-sm text-fg",
+        "placeholder:text-muted focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/10",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -43,7 +43,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.ComponentProps<"
     <select
       ref={ref}
       className={cn(
-        "h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-fg",
+        "h-10 w-full rounded-lg border border-border bg-bg/80 px-3 text-sm text-fg",
         "focus-visible:border-accent focus-visible:outline-none",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
