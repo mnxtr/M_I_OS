@@ -49,8 +49,11 @@ The publishable key is safe to identify the Supabase project, but access still
 depends on RLS and API authorization. Never add the Supabase service-role key
 to the frontend or to a `NEXT_PUBLIC_...` variable.
 
-Configure Supabase Auth with public sign-up disabled and allow the exact callback
-URLs for local, Vercel Preview, staging, and production:
+Configure Supabase Auth with public sign-up disabled, keep the email provider enabled, and
+allow the exact callback URLs for local, Vercel Preview, staging, and production.
+Invited owner/admin users may sign in with a password; floor users can continue using
+the secure email link flow. No frontend service-role key is required:
+
 
 ```text
 http://localhost:3000/auth/callback
@@ -91,7 +94,7 @@ that names an `mios_` object.
 ## Pilot walkthrough
 
 1. Invite the pilot user in Supabase Auth and create/link the application membership.
-2. Sign in with the email OTP/magic link and confirm the correct factory scope.
+2. Sign in with the invited user password or email OTP/magic link and confirm the correct factory scope.
 3. Review the Overview pulse and recent documents.
 4. Ask about Line C downtime and inspect the attached source citations.
 5. Run a line-performance analytics question.

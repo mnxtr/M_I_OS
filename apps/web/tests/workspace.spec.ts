@@ -16,6 +16,11 @@ test('sign-in is accessible, responsive and bilingual', async ({ page }, testInf
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByLabel('Work email')).toBeVisible();
+  await expect(page.getByLabel('Password')).toBeVisible();
+  await page.getByRole('tab', { name: 'Email link' }).click();
+  await expect(page.getByLabel('Password')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Email secure sign-in link' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Password' }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(accessibility.violations).toEqual([]);
