@@ -1,16 +1,18 @@
+import mimetypes
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.db import set_tenant
 from app.deps import CurrentUser, DbDep
 from app.models import Document, GuestToken
+from app.services.storage import StorageError, download_object, storage_configured
 
 router = APIRouter(tags=["guest"])
 
@@ -109,7 +111,7 @@ def guest_download(
     document_id: uuid.UUID,
     token: str = Query(min_length=1),
     db: DbDep = None,
-) -> FileResponse:
+) -> Response:
     guest_token = _resolve_token(db, token)
     set_tenant(db, guest_token.tenant_id)
 
@@ -120,6 +122,21 @@ def guest_download(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
 
     path = Path(document.storage_path)
-    if not path.exists():
+    if path.exists():
+        return FileResponse(path, filename=document.filename)
+    if not storage_configured():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File missing from storage")
-    return FileResponse(path, filename=document.filename)
+
+    try:
+        content = download_object(document.storage_path)
+    except StorageError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "File missing from storage") from None
+    media_type = mimetypes.guess_type(document.filename)[0] or "application/octet-stream"
+    safe_filename = (
+        Path(document.filename).name.replace('"', "").replace("\r", "").replace("\n", "")
+    )
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
+    )

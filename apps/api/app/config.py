@@ -7,10 +7,19 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://mios:mios_dev@localhost:5432/mios"
+    # Supabase owns user sessions in production. `legacy` is retained only for the
+    # migration test path and can be removed once the old auth tables are retired.
+    auth_mode: str = "supabase"  # supabase | legacy
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+    supabase_secret_key: str = ""
+    supabase_jwt_audience: str = "authenticated"
     jwt_secret: str = "dev-secret"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7
     storage_dir: str = "./storage"
+    db_bootstrap: bool = False
+    create_vector_extension: bool = False
 
     embedding_provider: str = "openai"  # openai | local
     embedding_dim: int = 384

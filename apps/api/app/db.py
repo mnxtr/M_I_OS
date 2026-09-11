@@ -16,6 +16,8 @@ def _make_engine():
 
     @event.listens_for(engine, "connect")
     def _register_type(dbapi_connection, _record):  # noqa: ANN001
+        if not settings.create_vector_extension:
+            return
         cursor = dbapi_connection.cursor()
         cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
         cursor.close()

@@ -1,5 +1,8 @@
+import mimetypes
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -15,6 +18,12 @@ from app.services.embeddings import embed_texts
 from app.services.ocr import OcrUnavailableError
 from app.services.parsers import ALLOWED_EXTENSIONS, detect_parser, is_tabular_file
 from app.services.plans import METRIC_PAGES, record_usage
+from app.services.storage import (
+    StorageError,
+    download_object,
+    storage_configured,
+    upload_object,
+)
 
 router = APIRouter(prefix="/v1/documents", tags=["documents"])
 
@@ -88,9 +97,9 @@ def _store_text_chunks(db, document: Document, pages: list[str]) -> int:
     return len(pages)
 
 
-def _store_tables(db, document: Document) -> int:
+def _store_tables(db, document: Document, source_path: Path) -> int:
     settings = get_settings()
-    sheets = tabular.parse_spreadsheet(Path(document.storage_path))
+    sheets = tabular.parse_spreadsheet(source_path)
     total_rows = 0
     for sheet in sheets:
         if not sheet["columns"] or not sheet["rows"]:
@@ -122,6 +131,23 @@ def _store_tables(db, document: Document) -> int:
     return total_rows
 
 
+@contextmanager
+def _materialize_document(document: Document):
+    """Provide a local parser path for either legacy disk files or Supabase objects."""
+    local_path = Path(document.storage_path)
+    if local_path.is_file():
+        yield local_path
+        return
+
+    if not storage_configured():
+        raise StorageError("File is not available in local or Supabase Storage")
+
+    with TemporaryDirectory(prefix="mios-document-") as temp_dir:
+        source_path = Path(temp_dir) / f"source{Path(document.filename).suffix.lower()}"
+        source_path.write_bytes(download_object(document.storage_path))
+        yield source_path
+
+
 def process_document(document_id: uuid.UUID) -> None:
     from app.db import SessionLocal
 
@@ -132,25 +158,25 @@ def process_document(document_id: uuid.UUID) -> None:
             return
         set_tenant(db, document.tenant_id)
         try:
-            path = Path(document.storage_path)
-            if is_tabular_file(document.filename):
-                stored_rows = _store_tables(db, document)
-                document.page_count = 0
-                document.status = "ready" if stored_rows > 0 else "failed"
-                document.error = "" if stored_rows > 0 else "No data rows found in spreadsheet"
-                record_usage(db, document.tenant_id, METRIC_PAGES, quantity=stored_rows)
-                return
+            with _materialize_document(document) as path:
+                if is_tabular_file(document.filename):
+                    stored_rows = _store_tables(db, document, path)
+                    document.page_count = 0
+                    document.status = "ready" if stored_rows > 0 else "failed"
+                    document.error = "" if stored_rows > 0 else "No data rows found in spreadsheet"
+                    record_usage(db, document.tenant_id, METRIC_PAGES, quantity=stored_rows)
+                    return
 
-            parser = detect_parser(path.suffix.lower())
-            if parser is None:
-                raise ValueError(f"No parser for {path.suffix}")
-            parsed = parser(path)
-            page_count = _store_text_chunks(db, document, parsed.pages)
-            document.page_count = page_count
-            document.status = "ready" if page_count > 0 else "failed"
-            if page_count == 0:
-                document.error = "No extractable text found"
-            record_usage(db, document.tenant_id, METRIC_PAGES, quantity=page_count)
+                parser = detect_parser(path.suffix.lower())
+                if parser is None:
+                    raise ValueError(f"No parser for {path.suffix}")
+                parsed = parser(path)
+                page_count = _store_text_chunks(db, document, parsed.pages)
+                document.page_count = page_count
+                document.status = "ready" if page_count > 0 else "failed"
+                if page_count == 0:
+                    document.error = "No extractable text found"
+                record_usage(db, document.tenant_id, METRIC_PAGES, quantity=page_count)
         except OcrUnavailableError as exc:
             document.status = "failed"
             document.error = str(exc)[:2000]
@@ -181,11 +207,23 @@ def create_and_store_document(
             f"Unsupported file type {suffix}. Allowed: {sorted(ALLOWED_EXTENSIONS)}",
         )
 
-    storage_root = Path(settings.storage_dir) / str(tenant_id)
-    storage_root.mkdir(parents=True, exist_ok=True)
     doc_id = uuid.uuid4()
-    dest = storage_root / f"{doc_id}{suffix}"
-    dest.write_bytes(content)
+    storage_path = f"{tenant_id}/{doc_id}{suffix}"
+    if storage_configured():
+        try:
+            upload_object(
+                storage_path,
+                content,
+                mimetypes.guess_type(filename)[0] or "application/octet-stream",
+            )
+        except StorageError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    else:
+        storage_root = Path(settings.storage_dir) / str(tenant_id)
+        storage_root.mkdir(parents=True, exist_ok=True)
+        local_path = storage_root / f"{doc_id}{suffix}"
+        local_path.write_bytes(content)
+        storage_path = str(local_path)
 
     document = Document(
         id=doc_id,
@@ -195,7 +233,7 @@ def create_and_store_document(
         doc_type="data" if is_tabular_file(filename) else doc_type,
         department=department,
         status="processing",
-        storage_path=str(dest),
+        storage_path=storage_path,
     )
     db.add(document)
     db.flush()

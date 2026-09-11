@@ -22,7 +22,8 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    _init_schema()
+    if get_settings().db_bootstrap:
+        _init_schema()
     yield
 
 
@@ -30,8 +31,9 @@ def _init_schema() -> None:
     """Dev bootstrap: create tables, vector/tsvector columns, RLS policies.
     (Alembic migrations replace this in Phase 2.)"""
     settings = get_settings()
-    with engine.begin() as conn:
-        conn.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
+    if settings.create_vector_extension:
+        with engine.begin() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
     Base.metadata.create_all(engine)
     from app.models import apply_rls
 

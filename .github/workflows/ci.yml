@@ -26,6 +26,7 @@ jobs:
         run: python -m pytest tests -q
         env:
           JWT_SECRET: ci-secret
+          AUTH_MODE: legacy
 
   web:
     runs-on: ubuntu-latest
@@ -36,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - name: Install

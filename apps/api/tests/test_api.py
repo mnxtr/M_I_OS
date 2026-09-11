@@ -1,6 +1,7 @@
 import os
 
 os.environ.setdefault("JWT_SECRET", "test-secret")
+os.environ.setdefault("AUTH_MODE", "legacy")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

@@ -145,9 +145,9 @@ def bkash_callback(
     db.flush()
 
     redirect_target = (
-        f"/workspace?payment=success&invoice={payment.invoice_no}"
+        f"/dashboard?payment=success&invoice={payment.invoice_no}"
         if payment.status == "succeeded"
-        else f"/workspace?payment={payment.status}"
+        else f"/dashboard?payment={payment.status}"
     )
     return Response(status_code=status.HTTP_302_FOUND, headers={"Location": redirect_target})
 

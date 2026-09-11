@@ -138,6 +138,7 @@ export function DocumentTable({ documents }: { documents: DocumentRecord[] }) {
 
       <TableWrapper>
         <Table>
+          <caption className="sr-only">{t.knowledge.title}</caption>
           <TableHeader>
             <TableRow>
               <TableHead>{t.knowledge.filename}</TableHead>
@@ -176,14 +177,14 @@ export function DocumentTable({ documents }: { documents: DocumentRecord[] }) {
                     <Link
                       href={`/knowledge/${doc.id}`}
                       aria-label={t.knowledge.view}
-                      className="rounded p-1.5 text-muted hover:text-fg"
+                      className="inline-flex size-9 items-center justify-center rounded text-muted hover:text-fg"
                     >
                       <Eye className="size-4" />
                     </Link>
                     <a
                       href={`/api/documents/${doc.id}/download`}
                       aria-label={t.knowledge.download}
-                      className="rounded p-1.5 text-muted hover:text-fg"
+                      className="inline-flex size-9 items-center justify-center rounded text-muted hover:text-fg"
                     >
                       <Download className="size-4" />
                     </a>
@@ -192,7 +193,7 @@ export function DocumentTable({ documents }: { documents: DocumentRecord[] }) {
                       onClick={() => void onReingest(doc)}
                       disabled={pendingId === doc.id}
                       aria-label={t.knowledge.reingest}
-                      className="rounded p-1.5 text-muted hover:text-fg disabled:opacity-40"
+                      className="inline-flex size-9 items-center justify-center rounded text-muted hover:text-fg disabled:opacity-40"
                     >
                       <RefreshCw className="size-4" />
                     </button>
@@ -201,7 +202,7 @@ export function DocumentTable({ documents }: { documents: DocumentRecord[] }) {
                       onClick={() => void onDelete(doc)}
                       disabled={pendingId === doc.id}
                       aria-label={t.common.delete}
-                      className="rounded p-1.5 text-muted hover:text-danger disabled:opacity-40"
+                      className="inline-flex size-9 items-center justify-center rounded text-muted hover:text-danger disabled:opacity-40"
                     >
                       <Trash2 className="size-4" />
                     </button>
