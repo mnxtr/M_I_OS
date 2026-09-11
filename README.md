@@ -224,6 +224,15 @@ M_I_OS/
 └── README.md
 ```
 
+## GitHub Pages
+
+GitHub Pages is configured through `.github/workflows/deploy-pages.yml`. Each push to
+`main` builds and deploys the static MIOS public site from `apps/web/github-pages/`.
+
+The authenticated workspace remains a server-rendered Next.js application with API
+routes, cookies, and server actions, so it must be deployed on a server-capable host
+alongside the FastAPI service. GitHub Pages is used for the public product surface.
+
 ---
 
 ## Quick start

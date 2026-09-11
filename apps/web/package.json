@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "build:github-pages": "node scripts/build-github-pages.mjs",
     "seed:demo-knowledge": "node scripts/seed-demo-knowledge.mjs",
     "backfill:knowledge-insights": "node scripts/backfill-knowledge-insights.mjs",
     "gen:db-types": "supabase gen types typescript --linked > ../../packages/shared/src/database.ts"

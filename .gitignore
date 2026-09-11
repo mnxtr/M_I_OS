@@ -9,6 +9,7 @@ venv/
 dist/
 build/
 .next/
+apps/web/github-pages-dist/
 *.tsbuildinfo
 *.egg-info/
 
