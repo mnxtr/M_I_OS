@@ -22,6 +22,8 @@ def register(payload: RegisterIn, db: DbDep) -> TokenOut:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
 
     tenant = Tenant(name=payload.company_name)
+    db.add(tenant)
+    db.flush()  # UUID defaults are assigned on flush, before the user's foreign key is set.
     user = User(
         tenant_id=tenant.id,
         email=payload.email.lower(),
@@ -29,7 +31,6 @@ def register(payload: RegisterIn, db: DbDep) -> TokenOut:
         full_name=payload.full_name,
         role="owner",
     )
-    db.add(tenant)
     db.add(user)
     db.flush()
     token = create_access_token(user.id, tenant.id, user.role)

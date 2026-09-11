@@ -1,5 +1,5 @@
-"use client";
 
+import { DatabaseZap, Sparkles, Upload } from 'lucide-react';
 import { FormEvent } from "react";
 
 import { QueryResult, TableInfo } from "@/lib/api";
@@ -73,10 +73,11 @@ export default function AnalyticsPanel({
             </div>
           ) : (
             <div className="empty-state compact-empty-state">
-              <span className="empty-index">00</span>
+              <span className="empty-index" aria-hidden="true"><DatabaseZap size={20} /></span>
               <h3>{tr.noTablesTitle}</h3>
               <p>{tr.noTablesCopy}</p>
               <button className="btn btn-secondary" onClick={onUpload}>
+                <Upload aria-hidden="true" size={15} />
                 {tr.uploadDoc}
               </button>
             </div>
@@ -102,6 +103,7 @@ export default function AnalyticsPanel({
               disabled={tables.length === 0}
             />
             <button className="btn btn-primary" disabled={busy || !query.trim() || tables.length === 0}>
+              <Sparkles aria-hidden="true" size={16} />
               {busy ? tr.pleaseWait : tr.run}
             </button>
           </form>

@@ -18,6 +18,8 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # This historical revision identifier exceeds Alembic's default 32 characters.
+    op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(64)")
     op.add_column("users", sa.Column("auth_user_id", postgresql.UUID(as_uuid=True), nullable=True))
     op.create_index("ix_users_auth_user_id", "users", ["auth_user_id"], unique=True)
     op.create_table(

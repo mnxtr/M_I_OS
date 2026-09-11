@@ -1,7 +1,13 @@
-"use client";
-
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  BarChart3,
+  BookOpenText,
+  LayoutDashboard,
+  LogOut,
+  MessageSquareText,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import LangToggle from "@/components/LangToggle";
 import {
@@ -28,16 +34,15 @@ import CompliancePanel from "./CompliancePanel";
 import DashboardOverview, { WorkspaceView } from "./DashboardOverview";
 import KnowledgePanel from "./KnowledgePanel";
 
-const NAV_ITEMS: { id: WorkspaceView; index: string }[] = [
-  { id: "overview", index: "01" },
-  { id: "chat", index: "02" },
-  { id: "compliance", index: "03" },
-  { id: "analytics", index: "04" },
-  { id: "knowledge", index: "05" },
+const NAV_ITEMS: { id: WorkspaceView; index: string; icon: LucideIcon }[] = [
+  { id: "overview", index: "01", icon: LayoutDashboard },
+  { id: "chat", index: "02", icon: MessageSquareText },
+  { id: "compliance", index: "03", icon: ShieldCheck },
+  { id: "analytics", index: "04", icon: BarChart3 },
+  { id: "knowledge", index: "05", icon: BookOpenText },
 ];
 
-export default function WorkspacePage() {
-  const router = useRouter();
+export default function WorkspacePage({ onSignedOut }: { onSignedOut: () => void }) {
   const [lang, setLang] = useLang();
   const tr = t(lang);
   const [activeView, setActiveView] = useState<WorkspaceView>("overview");
@@ -58,16 +63,14 @@ export default function WorkspacePage() {
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    void refreshWorkspace(dashboardFilters);
-  }, []);
+  const dashboardRequest = useRef(0);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages]);
 
-  async function refreshWorkspace(filters: DashboardFilters = dashboardFilters) {
+  const refreshWorkspace = useCallback(async (filters: DashboardFilters) => {
+    const requestId = ++dashboardRequest.current;
     setDashboardBusy(true);
     setDashboardError("");
     const [documentsResult, tablesResult, usageResult, dashboardResult] = await Promise.allSettled([
@@ -80,22 +83,41 @@ export default function WorkspacePage() {
     if (documentsResult.status === "fulfilled") setDocuments(documentsResult.value);
     if (tablesResult.status === "fulfilled") setTables(tablesResult.value);
     if (usageResult.status === "fulfilled") setUsage(usageResult.value);
-    if (dashboardResult.status === "fulfilled") setDashboard(dashboardResult.value);
-    else setDashboardError(dashboardResult.reason instanceof Error ? dashboardResult.reason.message : "Dashboard unavailable");
-    setDashboardBusy(false);
-  }
+    const failed = [documentsResult, tablesResult, usageResult].find((result) => result.status === "rejected");
+    if (failed?.status === "rejected") {
+      setError(failed.reason instanceof Error ? failed.reason.message : "Workspace data unavailable");
+    }
+    if (requestId === dashboardRequest.current) {
+      if (dashboardResult.status === "fulfilled") setDashboard(dashboardResult.value);
+      else setDashboardError(dashboardResult.reason instanceof Error ? dashboardResult.reason.message : "Dashboard unavailable");
+      setDashboardBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshWorkspace(defaultDashboardFilters());
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      dashboardRequest.current += 1;
+    };
+  }, [refreshWorkspace]);
 
   async function refreshDashboard(filters: DashboardFilters = dashboardFilters) {
+    const requestId = ++dashboardRequest.current;
     setDashboardBusy(true);
     setDashboardError("");
     try {
-      setDashboard(await fetchDashboard(filters));
+      const snapshot = await fetchDashboard(filters);
+      if (requestId === dashboardRequest.current) setDashboard(snapshot);
     } catch (dashboardFetchError) {
+      if (requestId !== dashboardRequest.current) return;
       setDashboardError(
         dashboardFetchError instanceof Error ? dashboardFetchError.message : "Dashboard unavailable",
       );
     } finally {
-      setDashboardBusy(false);
+      if (requestId === dashboardRequest.current) setDashboardBusy(false);
     }
   }
 
@@ -110,7 +132,7 @@ export default function WorkspacePage() {
 
     try {
       await uploadDocument(file);
-      await refreshWorkspace();
+      await refreshWorkspace(dashboardFilters);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
@@ -187,8 +209,9 @@ export default function WorkspacePage() {
   async function logout() {
     try {
       await signOut();
-    } finally {
-      router.replace("/");
+      onSignedOut();
+    } catch (signOutError) {
+      setError(signOutError instanceof Error ? signOutError.message : "Sign out failed. Please retry.");
     }
   }
 
@@ -196,6 +219,7 @@ export default function WorkspacePage() {
 
   return (
     <main className="app-shell">
+      <a className="skip-link" href="#workspace-content">Skip to workspace</a>
       <input
         id="workspace-upload"
         aria-label={tr.uploadDoc}
@@ -221,17 +245,21 @@ export default function WorkspacePage() {
         </div>
 
         <nav className="primary-nav" aria-label="Workspace navigation">
-          {NAV_ITEMS.map((item) => (
-            <button
-              className={activeView === item.id ? "nav-item is-active" : "nav-item"}
-              key={item.id}
-              onClick={() => navigate(item.id)}
-              aria-current={activeView === item.id ? "page" : undefined}
-            >
-              <span>{item.index}</span>
-              {navLabel(item.id, tr)}
-            </button>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                className={activeView === item.id ? "nav-item is-active" : "nav-item"}
+                key={item.id}
+                onClick={() => navigate(item.id)}
+                aria-current={activeView === item.id ? "page" : undefined}
+              >
+                <Icon className="nav-icon" aria-hidden="true" size={18} />
+                <span className="nav-label">{navLabel(item.id, tr)}</span>
+                <span className="nav-index" aria-hidden="true">{item.index}</span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="factory-card">
@@ -241,7 +269,7 @@ export default function WorkspacePage() {
           <div>
             <strong>{dashboard?.context.factory.name || tr.factoryLabel}</strong>
             <span>
-              <i className="status-dot" /> {tr.operational}
+              <i className="status-dot" /> {dashboard?.seeded_demo ? tr.seededData : dashboard ? tr.operational : tr.workspace}
             </span>
           </div>
         </div>
@@ -257,6 +285,7 @@ export default function WorkspacePage() {
             {usage ? <UsageSummary usage={usage} /> : null}
             <LangToggle lang={lang} onChange={setLang} />
             <button className="btn btn-quiet" onClick={() => void logout()}>
+              <LogOut aria-hidden="true" size={16} />
               {tr.signOut}
             </button>
           </div>
@@ -268,7 +297,7 @@ export default function WorkspacePage() {
           </div>
         ) : null}
 
-        <div className="app-content">
+        <div className="app-content" id="workspace-content" tabIndex={-1}>
           {activeView === "overview" ? (
             <DashboardOverview
               dashboard={dashboard}
@@ -299,7 +328,7 @@ export default function WorkspacePage() {
             />
           ) : null}
 
-          {activeView === "compliance" ? <CompliancePanel /> : null}
+          {activeView === "compliance" ? <CompliancePanel lang={lang} /> : null}
 
           {activeView === "analytics" ? (
             <AnalyticsPanel

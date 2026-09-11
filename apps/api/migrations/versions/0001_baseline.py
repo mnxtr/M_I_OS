@@ -1,31 +1,29 @@
-"""Baseline — schema is created by app bootstrap (Base.metadata.create_all).
+"""Frozen initial schema for fresh database deployments.
 
 Revision ID: 0001_baseline
 Revises:
 Create Date: 2026-08-24
 
-This migration intentionally has no operations. Fresh installs get the full schema
-from the application bootstrap (idempotent create_all + RLS policies + generated
-columns). From this point forward, every schema change MUST be expressed as an
-alembic revision so existing deployments can `alembic upgrade head`.
+Fresh installs apply the frozen pre-factory schema, then subsequent revisions.
+Existing databases already stamped at this revision are not modified.
 
 Existing deployments should run once:
     alembic stamp head   # if bootstrap already created the schema
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+from pathlib import Path
 
 from alembic import op
-import sqlalchemy as sa
 
 revision: str = "0001_baseline"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    pass
+    op.execute(Path(__file__).with_name("0001_schema.sql").read_text())
 
 
 def downgrade() -> None:
-    pass
+    raise RuntimeError("The baseline is irreversible; restore a database backup instead.")
