@@ -28,7 +28,8 @@
 - Dependencies: npm audit reports zero vulnerabilities. Next.js 15.5.25, PostCSS 8.5.28 and
   Sharp 0.35.4 resolve the initial advisories. ESLint 9 is retained for Next 15 compatibility;
   a future Next 16/tooling upgrade should be planned separately.
-- API: 75 tests pass locally; 2 database-dependent tests require the isolated CI service.
+- API: 75 tests pass locally; all 77 tests pass in GitHub's isolated database environment,
+  including fresh migration, registration/login and tenant-isolation verification.
   Python dependencies are compatible and pinned in requirements.lock; CI and Render consume it
   as a constraints file. Alembic's full upgrade SQL compiles offline.
 - Repaired the empty baseline migration, the historical revision's 33-character identifier,
@@ -46,7 +47,21 @@ Remote main has diverged into another implementation. This release is based on t
 codex/mios-pilot-foundation branch; the review PR targets that branch. Reconcile with main explicitly
 before promoting there. Do not overwrite the newer main application with this pilot tree.
 
-GitHub CI and Vercel preview verification are pending publication.
+- Review: https://github.com/mnxtr/M_I_OS/pull/15
+- Verified CI: https://github.com/mnxtr/M_I_OS/actions/runs/34641585165
+  API, web and secret scanning all passed. Browser tests: 8 passed; API: 77 passed;
+  clean npm installation/audit: zero vulnerabilities for this branch.
+- Vercel's existing GitHub integration successfully deployed the release to the mios2 / m-i-os
+  project: https://m-i-os-git-feature-mios-premium-release-mios2.vercel.app
+  GitHub deployment 6400701718 reports success for commit 3a4f459. The preview is protected by
+  Vercel SSO; an HTTP check reaches the Vercel login screen, so authenticated hosted smoke tests
+  are not claimed. The connected Vercel app lacks access to mios2 (HTTP 403).
+- A separate older mios-manufacturing-pilot-preview integration failed. Its failure is distinct
+  from the successful m-i-os deployment and requires reviewing that project's configuration.
+- Direct deployment through the connected app to mios-web returned HTTP 403. The published
+  preview above comes from the repository's existing GitHub integration, not that failed attempt.
+- The divergent main branch still has its own dependency alerts. This branch's clean audit does
+  not imply those alerts are resolved in main; merge/reconciliation remains separate work.
 
 ## Remaining production work
 
