@@ -4,6 +4,8 @@ export interface SupabaseConfig {
 }
 
 export function getSupabaseConfig(): SupabaseConfig | null {
+  if (process.env.MIOS_TEST_MODE === "true") return null;
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   return url && publishableKey ? { url, publishableKey } : null;

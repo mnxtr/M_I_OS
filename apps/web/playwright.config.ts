@@ -18,6 +18,6 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 60_000,
     // Never exercise production credentials in deterministic browser tests.
-    env: { NEXT_PUBLIC_SUPABASE_URL: '', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '', MIOS_API_URL: '' },
+    env: { MIOS_TEST_MODE: 'true', NEXT_PUBLIC_SUPABASE_URL: '', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '', MIOS_API_URL: '' },
   },
 });

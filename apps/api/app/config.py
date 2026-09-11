@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     supabase_publishable_key: str = ""
     supabase_audience: str = "authenticated"
     supabase_auto_provision_pilot: bool = False
-    auto_create_schema: bool = True
+    auto_create_schema: bool = False
     storage_dir: str = "./storage"
 
     embedding_provider: str = "openai"  # openai | local

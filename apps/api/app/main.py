@@ -1,7 +1,9 @@
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.db import Base, engine
@@ -18,6 +20,8 @@ from app.routers import (
     payments,
     tenant,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -67,6 +71,35 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok", "service": "mios-api"}
+
+    @app.get("/health/ready")
+    def readiness() -> dict:
+        """Readiness probe: required backing services are reachable."""
+        settings = get_settings()
+        dependencies = {"database": "ok"}
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            logger.warning("readiness check failed: database unavailable", exc_info=True)
+            dependencies["database"] = "unavailable"
+
+        if settings.use_celery:
+            try:
+                from redis import Redis
+
+                Redis.from_url(settings.redis_url).ping()
+                dependencies["redis"] = "ok"
+            except Exception:
+                logger.warning("readiness check failed: redis unavailable", exc_info=True)
+                dependencies["redis"] = "unavailable"
+
+        if any(value != "ok" for value in dependencies.values()):
+            raise HTTPException(
+                status_code=503,
+                detail={"status": "not_ready", "service": "mios-api", "dependencies": dependencies},
+            )
+        return {"status": "ready", "service": "mios-api", "dependencies": dependencies}
 
     return app
 
