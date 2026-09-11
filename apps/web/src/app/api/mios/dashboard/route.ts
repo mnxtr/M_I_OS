@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSeededDashboard, type DashboardFilters } from "@/lib/dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { validateDashboardDates } from "@/lib/request-validation";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  try { validateDashboardDates(request.nextUrl.searchParams); } catch (error) {
+    return NextResponse.json({ detail: (error as Error).message }, { status: 400 });
+  }
   const supabase = await createSupabaseServerClient();
   if (supabase) {
     const { data: claimsData } = await supabase.auth.getClaims();

@@ -288,6 +288,12 @@ Open:
 http://localhost:3000
 ```
 
+For frontend verification, run `npm run lint`, `npm run typecheck`, `npm run build`,
+then `npx playwright install chromium` and `npm test` from `apps/web`. The browser suite uses
+deterministic pilot data without real credentials. See
+[`docs/08-RELEASE-READINESS.md`](docs/08-RELEASE-READINESS.md) for the redesign plan, verified
+fixes, and the remaining production requirements.
+
 The shareable pilot frontend uses Supabase Auth, private object storage, and
 per-user seed provisioning. Add the hosted project URL and publishable key to
 `apps/web/.env.local`; never expose a service-role key in the browser. See

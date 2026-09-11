@@ -101,12 +101,14 @@ function DashboardFilterBar({ dashboard, filters, loading, lang, onChange, onRef
 function KpiCard({ metric, lang, onOpen }: { metric: KpiMetric; lang: Lang; onOpen: () => void }) {
   const tr = t(lang);
   const locale = lang === "bn" ? "bn-BD" : "en-GB";
+  const lowerIsBetter = ['reject_rate', 'downtime', 'compliance_gaps', 'overdue_actions'].includes(metric.key);
+  const deltaClass = metric.delta === 0 ? 'delta-neutral' : (metric.delta > 0) !== lowerIsBetter ? 'delta-good' : 'delta-bad';
   const labels: Record<string, string> = { output: lang === "bn" ? "আউটপুট" : "Output units", attainment: tr.attainment, reject_rate: lang === "bn" ? "রিজেক্ট হার" : "Reject rate", downtime: lang === "bn" ? "ডাউনটাইম" : "Downtime", compliance_gaps: lang === "bn" ? "কমপ্লায়েন্স ঘাটতি" : "Compliance gaps", overdue_actions: tr.overdue, time_saved: tr.expertTimeSaved };
   return (
     <button className={`kpi-card status-${metric.status}`} onClick={onOpen} aria-label={`${labels[metric.key] || metric.key}: ${metric.value} ${metric.unit}`}>
       <span>{labels[metric.key] || metric.key}</span>
       <strong>{metric.value.toLocaleString(locale)} <small>{metric.unit}</small></strong>
-      <span className="kpi-detail"><i className={metric.delta >= 0 ? "delta-up" : "delta-down"}>{metric.delta >= 0 ? "+" : ""}{metric.delta}%</i>{metric.target !== null ? `${tr.target} ${metric.target.toLocaleString(locale)}` : tr.comparison}</span>
+      <span className="kpi-detail"><i className={deltaClass}>{metric.delta >= 0 ? "+" : ""}{metric.delta}%</i>{metric.target !== null ? `${tr.target} ${metric.target.toLocaleString(locale)}` : tr.comparison}</span>
     </button>
   );
 }

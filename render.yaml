@@ -4,7 +4,7 @@ services:
     runtime: python
     region: singapore
     rootDir: apps/api
-    buildCommand: pip install -e ".[worker]"
+    buildCommand: pip install -c requirements.lock -e ".[worker]"
     preDeployCommand: alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
@@ -42,7 +42,7 @@ services:
     runtime: python
     region: singapore
     rootDir: apps/api
-    buildCommand: pip install -e ".[worker]"
+    buildCommand: pip install -c requirements.lock -e ".[worker]"
     startCommand: celery -A app.worker.celery_app worker --loglevel=info
     envVars:
       - key: AUTO_CREATE_SCHEMA

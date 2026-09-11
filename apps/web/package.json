@@ -9,21 +9,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint src tests --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.5",
     "@supabase/supabase-js": "2.113.0",
-    "next": "^15.1.0",
+    "next": "15.5.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-is": "19.2.8",
     "recharts": "3.10.1"
   },
+  "overrides": {
+    "postcss": "8.5.28",
+    "sharp": "0.35.4"
+  },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/eslintrc": "3.3.5",
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.25",
     "typescript": "^5.7.0"
   }
 }

@@ -46,7 +46,7 @@ const en = {
   factoryLabel: "Demo factory",
   operational: "Operational",
   overviewEyebrow: "Factory command center",
-  overviewTitle: "Good morning. Here is what needs attention.",
+  overviewTitle: "Your factory. In focus.",
   overviewCopy:
     "Your factory knowledge, compliance evidence, and production signals in one place.",
   allSystemsReady: "Workspace is ready",
@@ -74,7 +74,7 @@ const en = {
   addDocument: "Add document",
   uploadDoc: "Upload document",
   dropFiles: "Drop a PDF, Word file, or production sheet here",
-  supportedFiles: "PDF, TXT, MD, DOCX, XLSX, and CSV up to the API limit",
+  supportedFiles: "PDF, TXT, MD, DOCX, XLSX, and CSV · up to 15 MB",
   noDocsYet: "No sources yet. Add the documents your team already uses.",
   pages: "pages",
   rows: "rows",
@@ -383,9 +383,11 @@ export const LANG_STORAGE_KEY = "mios_lang";
 
 export function loadLang(): Lang {
   if (typeof window === "undefined") return "en";
-  return localStorage.getItem(LANG_STORAGE_KEY) === "bn" ? "bn" : "en";
+  try { return localStorage.getItem(LANG_STORAGE_KEY) === "bn" ? "bn" : "en"; }
+  catch { return "en"; }
 }
 
 export function saveLang(lang: Lang): void {
-  localStorage.setItem(LANG_STORAGE_KEY, lang);
+  try { localStorage.setItem(LANG_STORAGE_KEY, lang); }
+  catch { /* Language remains usable when browser storage is disabled. */ }
 }

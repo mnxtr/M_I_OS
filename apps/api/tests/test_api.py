@@ -27,7 +27,9 @@ def test_register_login_me_flow_requires_db(client):
         pytest.skip("Set MIOS_TEST_DSN to run integration tests against Postgres")
     os.environ["DATABASE_URL"] = os.environ["MIOS_TEST_DSN"]
 
-    email = "owner@testfactory.com"
+    import uuid
+
+    email = f"owner-{uuid.uuid4().hex}@testfactory.com"
     register = client.post(
         "/v1/auth/register",
         json={"company_name": "Test Factory Ltd", "email": email, "password": "s3cretpass"},

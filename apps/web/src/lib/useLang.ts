@@ -8,6 +8,9 @@ export function useLang(): [Lang, (lang: Lang) => void] {
   useEffect(() => {
     setLang(loadLang());
   }, []);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
   const change = useCallback((next: Lang) => {
     saveLang(next);
     setLang(next);

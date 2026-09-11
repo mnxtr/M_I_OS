@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSeededChatResponse } from "@/lib/chat";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseChatPayload } from "@/lib/request-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  let payload;
+  try { payload = parseChatPayload(body); } catch (error) {
+    return NextResponse.json({ detail: (error as Error).message }, { status: 400 });
+  }
+
   const apiUrl = process.env.MIOS_API_URL?.replace(/\/$/, "");
   if (apiUrl && accessToken) {
     const headers: Record<string, string> = {
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       cache: "no-store",
       headers,
-      body,
+      body: JSON.stringify(payload),
     });
     return new NextResponse(response.body, {
       status: response.status,
@@ -45,7 +51,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const payload = JSON.parse(body) as { question?: string };
   const seeded = createSeededChatResponse(payload.question || "");
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

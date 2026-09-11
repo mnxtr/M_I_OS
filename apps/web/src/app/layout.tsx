@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MIOS — Manufacturing OS Intelligence",
+  title: "MIOS — Manufacturing Intelligence OS",
   description: "Ask your factory anything. RAG-based manufacturing intelligence.",
+  applicationName: "MIOS",
 };
 
 export default function RootLayout({

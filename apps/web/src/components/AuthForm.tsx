@@ -57,6 +57,7 @@ export default function AuthForm({ reason }: { reason?: string }) {
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true">M</span>
           <span>{tr.appName}</span>
+          <span className="brand-edition">INTELLIGENCE OS</span>
         </div>
         <div className="auth-story-content">
           <p className="eyebrow">{tr.authEyebrow}</p>
@@ -67,8 +68,19 @@ export default function AuthForm({ reason }: { reason?: string }) {
             <span>{tr.bilingualReady}</span>
             <span>{tr.tenantSecure}</span>
           </div>
+          <div className="signal-map" aria-label={lang === "bn" ? "তথ্য থেকে সিদ্ধান্ত" : "From factory sources to grounded decisions"}>
+            <div className="signal-caption"><span>MIOS / SYSTEM ARCHITECTURE</span><span>01 — 03</span></div>
+            <div className="signal-flow">
+              <div className="signal-node"><span className="signal-symbol" aria-hidden="true">≡</span><strong>{lang === "bn" ? "উৎস" : "Sources"}</strong><small>SOP · CSV · PDF</small></div>
+              <span className="signal-connector" aria-hidden="true" />
+              <div className="signal-node signal-core"><span className="signal-symbol" aria-hidden="true">M</span><strong>{lang === "bn" ? "ইন্টেলিজেন্স" : "Intelligence"}</strong><small>RETRIEVE · REASON</small></div>
+              <span className="signal-connector" aria-hidden="true" />
+              <div className="signal-node"><span className="signal-symbol" aria-hidden="true">↗</span><strong>{lang === "bn" ? "সিদ্ধান্ত" : "Decisions"}</strong><small>INSIGHT · EVIDENCE</small></div>
+            </div>
+            <div className="signal-footer"><span className="status-dot" />{lang === "bn" ? "প্রতিটি উত্তরের সাথে উৎস" : "A source behind every answer."}</div>
+          </div>
         </div>
-        <p className="auth-footnote">{tr.tagline}</p>
+        <p className="auth-footnote"><span>BUILT FOR THE FACTORY FLOOR.</span><span>MIOS © {new Date().getFullYear()}</span></p>
       </section>
 
       <section className="auth-entry">
@@ -77,6 +89,7 @@ export default function AuthForm({ reason }: { reason?: string }) {
         </div>
         <div className="auth-card">
           <div className="auth-card-heading">
+            <span className="entry-symbol" aria-hidden="true">↗</span>
             <p className="eyebrow">{tr.invitationOnly}</p>
             <h2>{tr.welcomeBack}</h2>
             <p>{tr.otpDescription}</p>
@@ -99,6 +112,8 @@ export default function AuthForm({ reason }: { reason?: string }) {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
+                placeholder="you@company.com"
+                spellCheck={false}
                 required
               />
             </label>

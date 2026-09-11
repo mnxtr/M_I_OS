@@ -16,11 +16,9 @@ import {
   TemplateInfo,
   updateAssessmentItem,
 } from "@/lib/api";
-import { t } from "@/lib/i18n";
-import { useLang } from "@/lib/useLang";
+import { t, type Lang } from "@/lib/i18n";
 
-export default function CompliancePanel() {
-  const [lang] = useLang();
+export default function CompliancePanel({ lang }: { lang: Lang }) {
   const tr = t(lang);
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [assessments, setAssessments] = useState<AssessmentInfo[]>([]);
