@@ -52,7 +52,7 @@ flowchart LR
   evidence_coverage, freshness, limitations[], suggested_actions[], latency_ms}`.
 - OpenAI generation uses the Responses API through a central FastAPI adapter. The current pilot
   default is `gpt-5.6-terra` with low reasoning and low verbosity; all are environment-configurable.
-  Responses are not stored by the provider by default. No OpenAI credential is exposed to Next.js.
+  Responses are not stored by the provider by default. No OpenAI credential is exposed to the Vite browser bundle.
 
 ## 4. Evaluation (build from day 1)
 

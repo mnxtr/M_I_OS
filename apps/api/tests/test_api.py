@@ -19,6 +19,18 @@ def test_health(client):
     assert response.json() == {"status": "ok", "service": "mios-api"}
 
 
+def test_cors_allows_configured_vite_origin(client):
+    response = client.options(
+        "/health",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
 def test_register_login_me_flow_requires_db(client):
     """Integration flow — requires Postgres with pgvector (docker compose)."""
     import os

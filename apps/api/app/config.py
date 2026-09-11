@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     supabase_auto_provision_pilot: bool = False
     auto_create_schema: bool = False
     storage_dir: str = "./storage"
+    cors_origins: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3100"
+    )
 
     embedding_provider: str = "openai"  # openai | local
     embedding_dim: int = 384
@@ -48,7 +51,7 @@ class Settings(BaseSettings):
     bkash_app_secret: str = ""
     bkash_username: str = ""
     bkash_password: str = ""
-    public_base_url: str = "http://localhost:3000"
+    public_base_url: str = "http://localhost:5173"
     usd_to_bdt_rate: float = 120.0
 
 

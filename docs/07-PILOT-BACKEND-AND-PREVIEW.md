@@ -1,126 +1,114 @@
-# MIOS Pilot Backend and Preview Runbook
+# MIOS Vite, Supabase, and API runbook
 
-## Outcome
+## Runtime path
 
-The pilot frontend can run independently of the local Docker stack while the
-FastAPI service remains the production-path backend for RAG, OCR, and live
-factory integrations. Supabase provides the pilot authentication and hosted
-data boundary; Vercel hosts the Next.js preview.
-
-## Pilot request path
+MIOS uses a Vite/React single-page application, Supabase Auth, and FastAPI:
 
 ```text
-Pilot user
-  -> Next.js frontend on Vercel
-  -> Supabase Auth session
-  -> authenticated same-origin /api/mios routes
-  -> FastAPI on Render Singapore
-  -> RLS-protected Supabase Postgres + private Storage
+User
+  -> Vite frontend (local or Vercel)
+  -> Supabase Auth PKCE session
+  -> FastAPI /v1 requests with the Supabase access token
+  -> tenant-scoped PostgreSQL, pgvector, workers, and object storage
 ```
 
-The shareable preview uses an explicitly labelled, deterministic factory seed
-until live factory connectors are enabled. The seed includes:
+The browser uses only the Supabase project URL and publishable key. It never receives a
+service-role key. FastAPI validates the bearer token, resolves the active membership, and
+enforces the tenant boundary.
 
-- six manufacturing and compliance documents;
-- two structured production tables;
-- line and shift analytics examples;
-- evidence-grounded assistant responses;
-- social-compliance and quality templates;
-- a ready-to-run buyer audit assessment; and
-- a pilot usage and time-saved ledger.
+## Frontend configuration
 
-FastAPI is authoritative for business data and permissions. It validates the
-Supabase access token, loads the application user and active factory membership,
-then sets tenant context for forced database row-level security. Browser access
-to the temporary `mios_*` pilot tables is transitional and must be revoked once
-the corresponding FastAPI endpoints have parity.
-
-## Local configuration
-
-Use Node.js 22 or newer, then create `apps/web/.env.local` from the example:
+Use Node.js 22 or newer. Copy `apps/web/.env.example` to `apps/web/.env.local`:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
-MIOS_API_URL=http://localhost:8000
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+VITE_API_URL=
+VITE_API_PROXY_TARGET=http://127.0.0.1:8000
+VITE_DEMO_FALLBACK=false
 ```
 
-The publishable key is safe to identify the Supabase project, but access still
-depends on RLS and API authorization. Never add the Supabase service-role key
-to the frontend or to a `NEXT_PUBLIC_...` variable.
+An empty `VITE_API_URL` uses Vite's local `/v1` proxy. On Vercel, set it to the public
+HTTPS URL of the FastAPI service. `VITE_DEMO_FALLBACK` must remain false for production;
+when true, dashboard and chat failures intentionally fall back to labelled deterministic data.
 
-Configure Supabase Auth with public sign-up disabled, keep the email provider enabled, and
-allow the exact callback URLs for local, Vercel Preview, staging, and production.
-Invited owner/admin users may sign in with a password; floor users can continue using
-the secure email link flow. No frontend service-role key is required:
-
+Configure Supabase Auth with public and anonymous sign-up disabled, email enabled, leaked
+password protection enabled, and these redirect URLs as applicable:
 
 ```text
-http://localhost:3000/auth/callback
+http://localhost:5173/auth/callback
+http://127.0.0.1:5173/auth/callback
 https://<preview-host>/auth/callback
 https://<production-host>/auth/callback
 ```
 
-FastAPI requires `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`,
-`SUPABASE_AUDIENCE=authenticated`, and `AUTO_CREATE_SCHEMA=false` outside local
-bootstrap development.
+Invited users may sign in with a password or invitation-only magic link. The SPA exchanges
+the callback's PKCE code for a session, persists and refreshes that session, protects
+`/workspace`, and clears local auth state on sign-out.
 
 Run the frontend:
 
 ```bash
 cd apps/web
-npm install
+npm ci
 npm run dev
 ```
 
-## Database migrations
+## FastAPI configuration
 
-The migration sequence under `supabase/migrations/` retains the temporary pilot
-adapter. Canonical API schema revisions live under `apps/api/migrations/versions/`:
+FastAPI needs a dedicated database and these identity/network settings:
 
-1. `mios_pilot_backend` creates tables, seed records, storage, and policies.
-2. `harden_mios_pilot_functions` removes elevated RPC execution and blocks the
-   anonymous database role.
-3. `require_permanent_mios_accounts` excludes anonymous Supabase identities.
-4. `optimize_mios_rls_claims` makes the policy claim checks efficient at
-   scale.
-5. Alembic `0002_pilot_identity_and_factories` links Supabase identities,
-   creates/backfills factories and memberships, and forces tenant RLS.
+```env
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+SUPABASE_AUDIENCE=authenticated
+AUTO_CREATE_SCHEMA=false
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+```
 
-Apply migrations in order to a dedicated Supabase project. After changes, run
-both the Supabase security and performance advisors and resolve every finding
-that names an `mios_` object.
+Add the exact Vercel preview and production origins to `CORS_ORIGINS` in deployed
+environments. Wildcard origins are not used with credentialed requests.
 
-## Pilot walkthrough
+## Database and storage
 
-1. Invite the pilot user in Supabase Auth and create/link the application membership.
-2. Sign in with the invited user password or email OTP/magic link and confirm the correct factory scope.
-3. Review the Overview pulse and recent documents.
-4. Ask about Line C downtime and inspect the attached source citations.
-5. Run a line-performance analytics question.
-6. Open Compliance, run the seeded assessment, review gaps, and draft a
-   corrective action.
-7. Export the evidence binder.
-8. Upload a small supported document and confirm it appears in Knowledge.
+Apply the files in `supabase/migrations/` in order to the dedicated project. Canonical API
+schema revisions live in `apps/api/migrations/versions/`. After migration, run Supabase
+security and performance advisors and resolve every finding involving an `mios_` object.
 
-## Preview deployment
+The temporary browser-side pilot tables remain protected by RLS. Production ingestion, RAG,
+analytics, and authorization should continue moving behind FastAPI endpoint parity.
 
-Deploy `apps/web` as the Vercel project root. Configure the two public Supabase
-variables plus the private `MIOS_API_URL` independently for Preview and Production.
-The repository pins Node 22 and includes a minimal Vercel project configuration.
+## Verification
 
-The root `render.yaml` defines a Singapore FastAPI web service, Celery worker,
-and private key-value queue. Supply its database, Supabase, and model credentials
-in Render; secrets are deliberately marked `sync: false`. The web service runs
-`alembic upgrade head` as a pre-deploy command.
+Frontend:
 
-For a team pilot, prefer a Vercel Preview deployment with a temporary share
-link. Promote to Production only after the pilot owner confirms the preview,
-auth email delivery, file upload, assessment update, and binder export flows.
+```bash
+cd apps/web
+npm audit
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
 
-## Production boundary
+Backend:
 
-The Command Center already prefers authenticated FastAPI data and falls back to
-labelled deterministic data when `MIOS_API_URL` is absent. Ask MIOS, analytics,
-compliance, and knowledge are the next routes to move behind the same proxy;
-direct canonical table access is not an accepted production boundary.
+```bash
+cd apps/api
+.venv/bin/ruff check .
+.venv/bin/pytest -q
+```
+
+Before promotion, test an invited account end to end: password login, magic-link callback,
+dashboard request, cited chat response, upload, assessment update, binder export, sign-out,
+and direct navigation back to the protected workspace.
+
+## Deployment
+
+Use `apps/web` as the Vercel project root and set the three production browser variables:
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_API_URL`.
+The included Vercel rewrite sends deep links to `index.html`.
+
+The root `render.yaml` defines the FastAPI web service, worker, and queue. Supply database,
+Supabase, model, and CORS values in Render. The API's `/health` endpoint reports process
+health; `/health/ready` checks required backing services.

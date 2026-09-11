@@ -1,4 +1,3 @@
-"use client";
 
 import { ReactNode, useId } from "react";
 import {
@@ -20,25 +19,25 @@ import { Lang, t } from "@/lib/i18n";
 import type { WorkspaceView } from "./DashboardOverview";
 
 const COLORS: Record<string, string> = {
-  actual: "#7aa5f8",
-  target: "#a5b8da",
-  good: "#7aa5f8",
-  compliant: "#7aa5f8",
-  ready: "#7aa5f8",
-  completed: "#7aa5f8",
-  warning: "#dfb368",
-  partial: "#dfb368",
-  processing: "#a5b8da",
-  expiring: "#dfb368",
-  overdue: "#e68a98",
-  gap: "#e68a98",
-  failed: "#e68a98",
-  unknown: "#94a2b8",
-  stale: "#c7a169",
-  superseded: "#94a2b8",
-  draft: "#94a2b8",
-  "pending approval": "#dfb368",
-  "in progress": "#a5b8da",
+  actual: "#70a5ff",
+  target: "#9fb4d1",
+  good: "#70a5ff",
+  compliant: "#70a5ff",
+  ready: "#70a5ff",
+  completed: "#70a5ff",
+  warning: "#efbd68",
+  partial: "#efbd68",
+  processing: "#9fb4d1",
+  expiring: "#efbd68",
+  overdue: "#ff8f9e",
+  gap: "#ff8f9e",
+  failed: "#ff8f9e",
+  unknown: "#8491a6",
+  stale: "#d8a95d",
+  superseded: "#8491a6",
+  draft: "#8491a6",
+  "pending approval": "#efbd68",
+  "in progress": "#9fb4d1",
 };
 
 interface DashboardChartsProps {
@@ -76,7 +75,7 @@ export default function DashboardCharts({ dashboard, lang, onNavigate }: Dashboa
         >
           <AppChart label={tr.productionTrend}>
             <ComposedChart data={dashboard.production_series} margin={{ top: 8, right: 10, left: 2, bottom: 2 }}>
-              <CartesianGrid stroke="#e6ebe7" vertical={false} />
+              <CartesianGrid stroke="#202d3e" vertical={false} />
               <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} />
               <YAxis tickLine={false} axisLine={false} fontSize={11} width={48} />
               <ChartTooltip />
@@ -107,7 +106,7 @@ export default function DashboardCharts({ dashboard, lang, onNavigate }: Dashboa
         >
           <AppChart label={tr.linePerformance}>
             <BarChart data={dashboard.line_rankings} layout="vertical" margin={{ top: 8, right: 18, left: 12, bottom: 2 }}>
-              <CartesianGrid stroke="#e6ebe7" horizontal={false} />
+              <CartesianGrid stroke="#202d3e" horizontal={false} />
               <XAxis type="number" domain={[0, 100]} unit="%" tickLine={false} axisLine={false} fontSize={11} />
               <YAxis dataKey="line" type="category" width={58} tickLine={false} axisLine={false} fontSize={11} />
               <ChartTooltip />
@@ -140,7 +139,7 @@ export default function DashboardCharts({ dashboard, lang, onNavigate }: Dashboa
         >
           <AppChart label={tr.qualityPareto}>
             <BarChart data={dashboard.quality_pareto} margin={{ top: 8, right: 8, left: 0, bottom: 38 }}>
-              <CartesianGrid stroke="#e6ebe7" vertical={false} />
+              <CartesianGrid stroke="#202d3e" vertical={false} />
               <XAxis dataKey="category" angle={-24} textAnchor="end" height={62} interval={0} tickLine={false} axisLine={false} fontSize={10} />
               <YAxis tickLine={false} axisLine={false} fontSize={11} width={35} />
               <ChartTooltip />
@@ -179,16 +178,16 @@ export default function DashboardCharts({ dashboard, lang, onNavigate }: Dashboa
         >
           <AppChart label={tr.maintenanceHealth}>
             <BarChart data={dashboard.maintenance_health} margin={{ top: 8, right: 8, left: 0, bottom: 2 }}>
-              <CartesianGrid stroke="#e6ebe7" vertical={false} />
+              <CartesianGrid stroke="#202d3e" vertical={false} />
               <XAxis dataKey="category" tickLine={false} axisLine={false} fontSize={11} />
               <YAxis tickLine={false} axisLine={false} fontSize={11} width={35} />
               <ChartTooltip />
-              <Bar dataKey="planned" name={tr.planned} fill="#aab6af" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="planned" name={tr.planned} fill="#64748b" radius={[3, 3, 0, 0]} />
               <Bar dataKey="completed" name={tr.completed} fill={COLORS.completed} radius={[3, 3, 0, 0]} />
               <Bar dataKey="overdue" name={tr.overdue} fill={COLORS.overdue} radius={[3, 3, 0, 0]} />
             </BarChart>
           </AppChart>
-          <ChartLegend items={[[tr.planned, "#aab6af"], [tr.completed, COLORS.completed], [tr.overdue, COLORS.overdue]]} />
+          <ChartLegend items={[[tr.planned, "#64748b"], [tr.completed, COLORS.completed], [tr.overdue, COLORS.overdue]]} />
         </ChartCard>
       ) : null}
 
@@ -265,7 +264,7 @@ export function ChartLegend({ items }: { items: [string, string][] }) {
 }
 
 export function ChartTooltip() {
-  return <Tooltip cursor={{ fill: "rgba(23,107,77,0.06)" }} contentStyle={{ borderRadius: 8, borderColor: "#cbd3cd", fontSize: 12 }} />;
+  return <Tooltip cursor={{ fill: "rgba(120,167,255,0.08)" }} contentStyle={{ borderRadius: 8, borderColor: "#34455e", fontSize: 12 }} />;
 }
 
 export function ChartTable({
@@ -318,7 +317,7 @@ function StatusChartCard({ title, insight, data, lang, onAction, action, filenam
     >
       <AppChart label={title}>
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 30 }}>
-          <CartesianGrid stroke="#e6ebe7" vertical={false} />
+          <CartesianGrid stroke="#202d3e" vertical={false} />
           <XAxis dataKey="status" tickFormatter={humanize} angle={-18} textAnchor="end" height={52} interval={0} tickLine={false} axisLine={false} fontSize={10} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} width={35} />
           <ChartTooltip />

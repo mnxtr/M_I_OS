@@ -1,5 +1,5 @@
-"use client";
 
+import { FileStack, UploadCloud } from 'lucide-react';
 import { DragEvent, RefObject, useState } from "react";
 
 import { DocumentRecord } from "@/lib/api";
@@ -54,7 +54,7 @@ export default function KnowledgePanel({
         onDrop={acceptDrop}
       >
         <span className="upload-index" aria-hidden="true">
-          ADD
+          <UploadCloud size={20} />
         </span>
         <div>
           <h2>{tr.dropFiles}</h2>
@@ -65,6 +65,7 @@ export default function KnowledgePanel({
           disabled={isUploading}
           onClick={() => fileInput.current?.click()}
         >
+          <UploadCloud aria-hidden="true" size={16} />
           {isUploading ? tr.pleaseWait : tr.uploadDoc}
         </button>
       </div>
@@ -103,7 +104,7 @@ export default function KnowledgePanel({
           </div>
         ) : (
           <div className="empty-state">
-            <span className="empty-index">00</span>
+            <span className="empty-index" aria-hidden="true"><FileStack size={20} /></span>
             <h3>{tr.noKnowledgeTitle}</h3>
             <p>{tr.noDocsYet}</p>
           </div>

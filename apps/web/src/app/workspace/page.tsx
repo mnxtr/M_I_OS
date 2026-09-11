@@ -1,7 +1,13 @@
-"use client";
-
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  BarChart3,
+  BookOpenText,
+  LayoutDashboard,
+  LogOut,
+  MessageSquareText,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import LangToggle from "@/components/LangToggle";
 import {
@@ -28,16 +34,15 @@ import CompliancePanel from "./CompliancePanel";
 import DashboardOverview, { WorkspaceView } from "./DashboardOverview";
 import KnowledgePanel from "./KnowledgePanel";
 
-const NAV_ITEMS: { id: WorkspaceView; index: string }[] = [
-  { id: "overview", index: "01" },
-  { id: "chat", index: "02" },
-  { id: "compliance", index: "03" },
-  { id: "analytics", index: "04" },
-  { id: "knowledge", index: "05" },
+const NAV_ITEMS: { id: WorkspaceView; index: string; icon: LucideIcon }[] = [
+  { id: "overview", index: "01", icon: LayoutDashboard },
+  { id: "chat", index: "02", icon: MessageSquareText },
+  { id: "compliance", index: "03", icon: ShieldCheck },
+  { id: "analytics", index: "04", icon: BarChart3 },
+  { id: "knowledge", index: "05", icon: BookOpenText },
 ];
 
-export default function WorkspacePage() {
-  const router = useRouter();
+export default function WorkspacePage({ onSignedOut }: { onSignedOut: () => void }) {
   const [lang, setLang] = useLang();
   const tr = t(lang);
   const [activeView, setActiveView] = useState<WorkspaceView>("overview");
@@ -90,8 +95,13 @@ export default function WorkspacePage() {
   }, []);
 
   useEffect(() => {
-    void refreshWorkspace(defaultDashboardFilters());
-    return () => { dashboardRequest.current += 1; };
+    const timer = window.setTimeout(() => {
+      void refreshWorkspace(defaultDashboardFilters());
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      dashboardRequest.current += 1;
+    };
   }, [refreshWorkspace]);
 
   async function refreshDashboard(filters: DashboardFilters = dashboardFilters) {
@@ -199,8 +209,7 @@ export default function WorkspacePage() {
   async function logout() {
     try {
       await signOut();
-      router.replace("/");
-      router.refresh();
+      onSignedOut();
     } catch (signOutError) {
       setError(signOutError instanceof Error ? signOutError.message : "Sign out failed. Please retry.");
     }
@@ -236,17 +245,21 @@ export default function WorkspacePage() {
         </div>
 
         <nav className="primary-nav" aria-label="Workspace navigation">
-          {NAV_ITEMS.map((item) => (
-            <button
-              className={activeView === item.id ? "nav-item is-active" : "nav-item"}
-              key={item.id}
-              onClick={() => navigate(item.id)}
-              aria-current={activeView === item.id ? "page" : undefined}
-            >
-              <span aria-hidden="true">{item.index}</span>
-              {navLabel(item.id, tr)}
-            </button>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                className={activeView === item.id ? "nav-item is-active" : "nav-item"}
+                key={item.id}
+                onClick={() => navigate(item.id)}
+                aria-current={activeView === item.id ? "page" : undefined}
+              >
+                <Icon className="nav-icon" aria-hidden="true" size={18} />
+                <span className="nav-label">{navLabel(item.id, tr)}</span>
+                <span className="nav-index" aria-hidden="true">{item.index}</span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="factory-card">
@@ -272,6 +285,7 @@ export default function WorkspacePage() {
             {usage ? <UsageSummary usage={usage} /> : null}
             <LangToggle lang={lang} onChange={setLang} />
             <button className="btn btn-quiet" onClick={() => void logout()}>
+              <LogOut aria-hidden="true" size={16} />
               {tr.signOut}
             </button>
           </div>

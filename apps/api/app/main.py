@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -57,6 +58,19 @@ def _init_schema() -> None:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="MIOS API", version="0.1.0", lifespan=lifespan)
+    settings = get_settings()
+    cors_origins = [
+        origin.strip()
+        for origin in settings.cors_origins.split(",")
+        if origin.strip()
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Factory-Id"],
+    )
     app.include_router(auth.router)
     app.include_router(dashboard.router)
     app.include_router(documents.router)

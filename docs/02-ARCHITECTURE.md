@@ -5,7 +5,7 @@
 ```mermaid
 flowchart LR
     subgraph Client
-        PWA[PWA / Next.js]
+        PWA[Vite React SPA]
         Mob[Mobile Web]
     end
 
@@ -56,7 +56,7 @@ flowchart LR
 | Vectors | pgvector (start) → Qdrant (scale) | One database fewer to operate early; migrate when >10M chunks |
 | Time-series | TimescaleDB extension | Production metrics/sensor data in same Postgres = simpler ops |
 | Object storage | S3-compatible (MinIO local dev, S3 prod) | Raw docs retained for citations & re-indexing |
-| Frontend | Next.js 15 (React 19, TypeScript) | PWA support for offline-tolerant UX |
+| Frontend | Vite 8 (React 19, TypeScript) | PWA support for offline-tolerant UX |
 | LLM serving | API providers first; vLLM + open-weights (Qwen2.5-72B / Llama-3.3-70B class) for enterprise on-prem tier | Cost control + data-sovereignty sales argument |
 | Embeddings | Multilingual model (e.g., `bge-m3` or OpenAI `text-embedding-3-large`) — must handle Bangla | Bangla retrieval is a differentiator; test on Bangla eval set from day 1 |
 | OCR | Tesseract (Bangla+eng) baseline → hosted doc-AI (Azure Document Intelligence / Google DocAI) for scanned audit reports | Scanned PDFs dominate compliance docs in BD factories |

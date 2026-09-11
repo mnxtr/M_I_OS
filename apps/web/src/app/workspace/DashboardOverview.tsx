@@ -1,16 +1,12 @@
-"use client";
-
-import dynamic from "next/dynamic";
+import { RefreshCw } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 
 import type { DashboardFilters, DashboardSnapshot, KpiMetric } from "@/lib/dashboard";
 import { Lang, t } from "@/lib/i18n";
 
-export type WorkspaceView = "overview" | "chat" | "compliance" | "analytics" | "knowledge";
+const DashboardCharts = lazy(() => import('./DashboardCharts'));
 
-const DashboardCharts = dynamic(() => import("./DashboardCharts"), {
-  loading: () => <div className="dashboard-loading" aria-live="polite">Loading charts…</div>,
-  ssr: false,
-});
+export type WorkspaceView = "overview" | "chat" | "compliance" | "analytics" | "knowledge";
 
 interface DashboardOverviewProps {
   dashboard: DashboardSnapshot | null;
@@ -62,7 +58,11 @@ export default function DashboardOverview({
           <section className="kpi-grid" aria-label={tr.workspacePulse}>
             {dashboard.kpis.map((metric) => <KpiCard key={metric.key} metric={metric} lang={lang} onOpen={() => onNavigate(moduleView(metric.module))} />)}
           </section>
-          <DashboardCharts dashboard={dashboard} lang={lang} onNavigate={onNavigate} />
+          <Suspense
+            fallback={<div className="dashboard-loading" aria-live="polite">{tr.dashboardLoading}</div>}
+          >
+            <DashboardCharts dashboard={dashboard} lang={lang} onNavigate={onNavigate} />
+          </Suspense>
           <FreshnessPanel dashboard={dashboard} lang={lang} />
         </>
       ) : null}
@@ -93,7 +93,7 @@ function DashboardFilterBar({ dashboard, filters, loading, lang, onChange, onRef
       <div className="period-control"><span>{tr.period}</span><div className="preset-buttons"><button className={activePreset === 1 ? "is-active" : ""} aria-pressed={activePreset === 1} onClick={() => setPreset(1)}>{tr.today}</button><button className={activePreset === 7 ? "is-active" : ""} aria-pressed={activePreset === 7} onClick={() => setPreset(7)}>{tr.sevenDays}</button><button className={activePreset === 30 ? "is-active" : ""} aria-pressed={activePreset === 30} onClick={() => setPreset(30)}>{tr.thirtyDays}</button></div></div>
       <label className="field-label compact-filter"><span>{tr.line}</span><select value={filters.lineId || ""} onChange={(event) => onChange({ ...filters, lineId: event.target.value || undefined })}><option value="">{tr.allLines}</option>{dashboard?.context.available_lines.map((line) => <option key={line}>{line}</option>)}</select></label>
       <label className="field-label compact-filter"><span>{tr.shift}</span><select value={filters.shift || ""} onChange={(event) => onChange({ ...filters, shift: event.target.value || undefined })}><option value="">{tr.allShifts}</option>{dashboard?.context.available_shifts.map((shift) => <option key={shift}>{shift}</option>)}</select></label>
-      <button className="btn btn-secondary dashboard-refresh" disabled={loading} onClick={onRefresh}>{loading ? tr.pleaseWait : tr.refresh}</button>
+      <button className="btn btn-secondary dashboard-refresh" disabled={loading} onClick={onRefresh}><RefreshCw aria-hidden="true" size={15} />{loading ? tr.pleaseWait : tr.refresh}</button>
     </section>
   );
 }
