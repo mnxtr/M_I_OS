@@ -16,11 +16,24 @@ def client():
 def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "mios-api"}
+    assert response.json()["status"] == "ok"
+    assert response.json()["service"] == "linora-api"
+
+
+def test_readiness_rejects_production_defaults(client, monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    # Settings are cached, so clear it before and after the environment override.
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    response = client.get("/health/ready")
+    get_settings.cache_clear()
+    assert response.status_code == 503
+    assert "DATABASE_URL" in response.json()["detail"]["missing"]
 
 
 def test_register_login_me_flow_requires_db(client):
-    """Integration flow — requires Postgres with pgvector (docker compose)."""
+    """Integration flow â requires Postgres with pgvector (docker compose)."""
     import os
 
     if not os.environ.get("MIOS_TEST_DSN"):

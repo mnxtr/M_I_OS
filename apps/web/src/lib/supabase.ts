@@ -5,12 +5,6 @@ const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const supabaseEnabled = Boolean(url && key);
 export const supabase = supabaseEnabled ? createClient(url, key) : null;
 
-// Retain the existing API token key while Supabase owns persistence and refresh.
-supabase?.auth.onAuthStateChange((_event, session) => {
-  if (session) localStorage.setItem("mios_token", session.access_token);
-  else localStorage.removeItem("mios_token");
-});
-
 export async function getAccessToken(): Promise<string | null> {
   if (!supabase) return localStorage.getItem("mios_token");
   const { data, error } = await supabase.auth.getSession();
@@ -21,5 +15,15 @@ export async function getAccessToken(): Promise<string | null> {
 
 export async function signOut() {
   if (supabase) await supabase.auth.signOut();
+  localStorage.removeItem("mios_token");
+}
+
+/** Persist only the legacy API token when Supabase is intentionally disabled. */
+export function persistLegacyToken(token: string) {
+  if (!supabase) localStorage.setItem("mios_token", token);
+}
+
+/** Clear the legacy token without copying Supabase access tokens into app storage. */
+export function clearLegacyToken() {
   localStorage.removeItem("mios_token");
 }

@@ -64,15 +64,28 @@ export default function ProductionCharts({
       actual: point.actual ?? undefined,
     }));
   const daily = result.daily ?? [];
-  const filteredDaily = Object.values(points.reduce<Record<string, { label: string; target: number; actual: number }>>((days, point) => {
-    const day = days[point.date] ?? { label: dayLabel(point.date), target: 0, actual: 0 };
+  const filteredDaily = Object.values(points.reduce<Record<string, { label: string; target: number; actual: number; observed: number; missing: number }>>((days, point) => {
+    const day = days[point.date] ?? { label: dayLabel(point.date), target: 0, actual: 0, observed: 0, missing: 0 };
     day.target += point.target;
-    day.actual += point.actual ?? 0;
+    if (point.actual == null) day.missing += 1;
+    else { day.actual += point.actual; day.observed += 1; }
     days[point.date] = day;
     return days;
-  }, {}));
-  const trend: Array<{ label: string; target: number; actual?: number }> = lineFilter === "all" && daily.length >= 2
-    ? daily.map((day) => ({ ...day, label: dayLabel(day.date), actual: day.actual_units, target: day.target_units }))
+  }, {})).map((day) => ({
+    label: day.label,
+    target: day.target,
+    // A day with no actual readings is missing data, not zero production.
+    actual: day.observed > 0 ? day.actual : undefined,
+    coverage: day.observed,
+    missing: day.missing,
+  }));
+  const trend: Array<{ label: string; target: number; actual?: number; coverage?: number; missing?: number }> = lineFilter === "all" && daily.length >= 2
+    ? daily.map((day) => ({
+      label: dayLabel(day.date),
+      actual: day.observed_intervals > 0 ? day.actual_units : undefined,
+      target: day.target_units,
+      coverage: day.observed_intervals,
+    }))
     : filteredDaily.length >= 2 ? filteredDaily : points;
   const fallbackLines = Object.values(points.reduce<Record<string, { line: string; target_units: number; actual_units: number; gap_units: number }>>((summary, point) => {
     const line = summary[point.line] ?? { line: point.line, target_units: 0, actual_units: 0, gap_units: 0 };
@@ -88,13 +101,14 @@ export default function ProductionCharts({
 
   return (
     <section className="chart-grid" aria-label="Production charts from submitted intervals">
+      <p className="sr-only">Charts use submitted intervals only. Missing actual readings are shown as missing data, not zero output.</p>
       <article className="chart-card chart-card-wide">
         <div className="chart-heading">
           <div>
             <span className="eyebrow">TARGET VS ACTUAL</span>
             <h3>{daily.length >= 2 ? "Daily production trend" : "Interval production trend"}</h3>
           </div>
-          <span className="chart-note">Pieces · {trend.length} observed points</span>
+          <span className="chart-note">Pieces Â· {trend.length} observed points</span>
         </div>
         <div className="chart-canvas" role="img" aria-label="Target and actual production trend in pieces">
           <ResponsiveContainer width="100%" height={280}>
@@ -109,7 +123,13 @@ export default function ProductionCharts({
               <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
               <YAxis tickLine={false} axisLine={false} width={42} />
               <Tooltip
-                formatter={(value, name) => [`${Array.isArray(value) ? value.join("–") : value ?? "—"} pcs`, name === "actual" ? "Actual" : "Target"]}
+                formatter={(value, name) => [`${Array.isArray(value) ? value.join("â") : value ?? "â"} pcs`, name === "actual" ? "Actual output" : "Target output"]}
+                labelFormatter={(label, payload) => {
+                  const point = payload?.[0]?.payload as { coverage?: number; missing?: number } | undefined;
+                  const coverage = point?.coverage;
+                  const missing = point?.missing;
+                  return `${label}${coverage != null ? ` Â· ${coverage} observed${missing ? `, ${missing} missing` : ""}` : ""}`;
+                }}
                 contentStyle={{ borderRadius: 10, borderColor: "#d8e1e3" }}
               />
               <Legend formatter={(value) => value === "actual" ? "Actual output" : "Target output"} />
@@ -132,7 +152,7 @@ export default function ProductionCharts({
               <XAxis type="number" tickLine={false} axisLine={false} />
               <YAxis dataKey="line" type="category" width={88} tickLine={false} axisLine={false} />
               <Tooltip
-                formatter={(value, name) => [`${Array.isArray(value) ? value.join("–") : value ?? "—"} pcs`, name === "actual_units" ? "Actual" : "Target"]}
+                formatter={(value, name) => [`${Array.isArray(value) ? value.join("â") : value ?? "â"} pcs`, name === "actual_units" ? "Actual" : "Target"]}
                 contentStyle={{ borderRadius: 10, borderColor: "#d8e1e3" }}
               />
               <Legend formatter={(value) => value === "actual_units" ? "Actual" : "Target"} />
@@ -146,7 +166,7 @@ export default function ProductionCharts({
       <article className="chart-card chart-card-wide">
         <div className="chart-heading">
           <div><span className="eyebrow">GAP PATTERN</span><h3>Time-slot coverage and shortfall</h3></div>
-          <span className="chart-note">Gold = a shortfall · Grey = no submitted interval</span>
+          <span className="chart-note">Gold = a shortfall Â· Grey = no submitted interval</span>
         </div>
         <div className="heatmap-wrap">
           <table className="gap-heatmap">

@@ -1,5 +1,8 @@
+import uuid
+
+import httpx
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from app.deps import CurrentUser, DbDep
 from app.models import Tenant
@@ -12,6 +15,7 @@ from app.services.plans import (
     limit_for,
     period_key,
 )
+from app.services.supabase_provisioning import provision_membership
 
 router = APIRouter(prefix="/v1/tenant", tags=["tenant"])
 
@@ -32,6 +36,13 @@ class UsageOut(BaseModel):
 
 class PlanSwitchIn(BaseModel):
     plan: str = Field(min_length=1, max_length=30)
+
+
+class MembershipProvisionIn(BaseModel):
+    user_id: uuid.UUID
+    email: EmailStr
+    full_name: str = Field(default="", max_length=200)
+    role: str = Field(min_length=1, max_length=40)
 
 
 @router.get("/usage", response_model=UsageOut)
@@ -66,6 +77,31 @@ def switch_plan(payload: PlanSwitchIn, user: CurrentUser, db: DbDep) -> PlanOut:
 @router.get("/plans", response_model=list[PlanOut])
 def list_plans(_user: CurrentUser) -> list[PlanOut]:
     return [_plan_out(code) for code in PLANS]
+
+
+@router.post("/memberships", status_code=status.HTTP_204_NO_CONTENT)
+def provision_factory_membership(
+    payload: MembershipProvisionIn, user: CurrentUser, db: DbDep
+) -> None:
+    if user.role not in {"owner", "admin"}:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only owners and admins can provision members")
+    if payload.role == "owner" and user.role != "owner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can provision another owner")
+    tenant = _tenant_of(db, user)
+    try:
+        provision_membership(
+            user_id=payload.user_id,
+            tenant_id=tenant.id,
+            email=str(payload.email),
+            full_name=payload.full_name,
+            role=payload.role,
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    except httpx.HTTPError:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Supabase membership update failed") from None
 
 
 def _plan_out(plan_code: str) -> PlanOut:

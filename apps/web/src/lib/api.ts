@@ -1,4 +1,4 @@
-import { getAccessToken, supabase } from "./supabase";
+import { clearLegacyToken, getAccessToken, supabase } from "./supabase";
 
 export const API_URL =
   import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -41,7 +41,7 @@ async function authHeaders(): Promise<HeadersInit> {
 
 async function handle<T>(response: Response): Promise<T> {
   if (response.status === 401) {
-    localStorage.removeItem("mios_token");
+    clearLegacyToken();
     window.location.href = "/";
     throw new Error("Session expired");
   }

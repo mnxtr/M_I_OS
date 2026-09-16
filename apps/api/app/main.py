@@ -1,12 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.config import get_settings
 from app.db import Base, engine
-from app.models import Chunk  # noqa: F401 — ensure models registered before create_all
+from app.models import Chunk  # noqa: F401 â ensure models registered before create_all
 from app.routers import (
     analytics,
     auth,
@@ -85,7 +85,33 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "service": "mios-api"}
+        return {"status": "ok", "service": "linora-api", "environment": get_settings().app_env}
+
+    @app.get("/health/ready")
+    def readiness(response: Response) -> dict:
+        """Check configuration and database reachability without exposing secrets."""
+        settings = get_settings()
+        missing = []
+        if settings.app_env in {"staging", "production"}:
+            if settings.database_url.startswith("postgresql+psycopg://mios:mios_dev@"):
+                missing.append("DATABASE_URL")
+            if settings.auth_provider == "supabase":
+                if not settings.supabase_url:
+                    missing.append("SUPABASE_URL")
+                if not settings.supabase_publishable_key:
+                    missing.append("SUPABASE_PUBLISHABLE_KEY")
+            if not settings.cors_origins:
+                missing.append("CORS_ORIGINS")
+        if missing:
+            response.status_code = 503
+            raise HTTPException(503, {"status": "not_ready", "missing": missing})
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except Exception:  # noqa: BLE001 â readiness must not leak database details
+            response.status_code = 503
+            raise HTTPException(503, "Database unavailable") from None
+        return {"status": "ready", "service": "linora-api"}
 
     return app
 

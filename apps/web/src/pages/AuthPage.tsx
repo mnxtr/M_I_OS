@@ -7,7 +7,7 @@ import { t } from "@/lib/i18n";
 import { useLang } from "@/lib/useLang";
 import LangToggle from "@/components/LangToggle";
 import Icon from "@/components/Icon";
-import { getAccessToken, supabaseEnabled } from "@/lib/supabase";
+import { getAccessToken, persistLegacyToken, supabaseEnabled } from "@/lib/supabase";
 
 export default function AuthPage() {
   const router = useNavigate();
@@ -35,7 +35,7 @@ export default function AuthPage() {
         mode === "login"
           ? await login(email, password)
           : await register(companyName, fullName, email, password);
-      localStorage.setItem("mios_token", token);
+      persistLegacyToken(token);
       router("/workspace");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -48,20 +48,20 @@ export default function AuthPage() {
     <main className="auth-shell">
       <section className="auth-story">
         <a className="brand" href="#/"><span className="brand-mark">L</span>Linora<span className="brand-period">.</span></a>
-        <div className="auth-story-copy"><span className="eyebrow">{lang === "bn" ? "কারখানার ইন্টেলিজেন্স, সবার জন্য" : "A CLEARER VIEW OF YOUR FACTORY"}</span><h1>{lang === "bn" ? "কম অনুমান। আরও স্পষ্ট সিদ্ধান্ত।" : <>Less guesswork.<br/>More clarity.</>}</h1><p>{lang === "bn" ? "উৎপাদনের ঘাটতি, শিফটের তথ্য ও কারখানার জ্ঞান এক জায়গায় আনুন।" : "Bring your production gaps, shift records and factory knowledge into one focused workspace."}</p></div>
+        <div className="auth-story-copy"><span className="eyebrow">{lang === "bn" ? "à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦à¦¨à§à¦à§à¦²à¦¿à¦à§à¦¨à§à¦¸, à¦¸à¦¬à¦¾à¦° à¦à¦¨à§à¦¯" : "A CLEARER VIEW OF YOUR FACTORY"}</span><h1>{lang === "bn" ? "à¦à¦® à¦à¦¨à§à¦®à¦¾à¦¨à¥¤ à¦à¦°à¦ à¦¸à§à¦ªà¦·à§à¦ à¦¸à¦¿à¦¦à§à¦§à¦¾à¦¨à§à¦¤à¥¤" : <>Less guesswork.<br/>More clarity.</>}</h1><p>{lang === "bn" ? "à¦à§à¦ªà¦¾à¦¦à¦¨à§à¦° à¦à¦¾à¦à¦¤à¦¿, à¦¶à¦¿à¦«à¦à§à¦° à¦¤à¦¥à§à¦¯ à¦ à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦à§à¦à¦¾à¦¨ à¦à¦ à¦à¦¾à¦¯à¦¼à¦à¦¾à¦¯à¦¼ à¦à¦¨à§à¦¨à¥¤" : "Bring your production gaps, shift records and factory knowledge into one focused workspace."}</p></div>
         <div className="auth-feature-list">{[
-          {icon:"overview" as const, title:lang === "bn" ? "ঘাটতি দেখুন" : "Spot the shortfall", text:lang === "bn" ? "লক্ষ্য ও প্রকৃত উৎপাদন তুলনা করুন।" : "Compare targets with actual output."},
-          {icon:"knowledge" as const, title:lang === "bn" ? "জ্ঞান একসাথে রাখুন" : "Keep knowledge close", text:lang === "bn" ? "এসওপি ও শিফটের রেকর্ড এক জায়গায়।" : "Keep SOPs and shift records in one place."},
-          {icon:"assistant" as const, title:lang === "bn" ? "প্রমাণ থেকে উত্তর" : "Ask with context", text:lang === "bn" ? "কারখানার উৎস থেকে উত্তর খুঁজুন।" : "Find answers grounded in your sources."},
+          {icon:"overview" as const, title:lang === "bn" ? "à¦à¦¾à¦à¦¤à¦¿ à¦¦à§à¦à§à¦¨" : "Spot the shortfall", text:lang === "bn" ? "à¦²à¦à§à¦·à§à¦¯ à¦ à¦ªà§à¦°à¦à§à¦¤ à¦à§à¦ªà¦¾à¦¦à¦¨ à¦¤à§à¦²à¦¨à¦¾ à¦à¦°à§à¦¨à¥¤" : "Compare targets with actual output."},
+          {icon:"knowledge" as const, title:lang === "bn" ? "à¦à§à¦à¦¾à¦¨ à¦à¦à¦¸à¦¾à¦¥à§ à¦°à¦¾à¦à§à¦¨" : "Keep knowledge close", text:lang === "bn" ? "à¦à¦¸à¦à¦ªà¦¿ à¦ à¦¶à¦¿à¦«à¦à§à¦° à¦°à§à¦à¦°à§à¦¡ à¦à¦ à¦à¦¾à¦¯à¦¼à¦à¦¾à¦¯à¦¼à¥¤" : "Keep SOPs and shift records in one place."},
+          {icon:"assistant" as const, title:lang === "bn" ? "à¦ªà§à¦°à¦®à¦¾à¦£ à¦¥à§à¦à§ à¦à¦¤à§à¦¤à¦°" : "Ask with context", text:lang === "bn" ? "à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦à§à¦¸ à¦¥à§à¦à§ à¦à¦¤à§à¦¤à¦° à¦à§à¦à¦à§à¦¨à¥¤" : "Find answers grounded in your sources."},
         ].map(item => <div key={item.icon}><span className="feature-icon"><Icon name={item.icon}/></span><div><strong>{item.title}</strong><p>{item.text}</p></div></div>)}</div>
-        <span className="auth-story-footer">{lang === "bn" ? "বাংলাদেশের কারখানার জন্য তৈরি" : "BUILT AROUND BANGLADESH’S FACTORY FLOOR"}</span>
+        <span className="auth-story-footer">{lang === "bn" ? "à¦¬à¦¾à¦à¦²à¦¾à¦¦à§à¦¶à§à¦° à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦à¦¨à§à¦¯ à¦¤à§à¦°à¦¿" : "BUILT AROUND BANGLADESHâS FACTORY FLOOR"}</span>
       </section>
       <section className="auth-form-side">
         <div className="auth-language">
           <LangToggle lang={lang} onChange={setLang} />
         </div>
-        <div className="auth-form-wrap"><span className="eyebrow">{lang === "bn" ? "আপনার ওয়ার্কস্পেস" : "YOUR LINEORA WORKSPACE"}</span><h2>{mode === "login" ? (lang === "bn" ? "আবার স্বাগতম।" : "Welcome back.") : (lang === "bn" ? "আপনার একাউন্ট তৈরি করুন।" : "Make room for clearer decisions.")}</h2>
-        <p className="auth-description">{mode === "login" ? (lang === "bn" ? "আপনার কারখানার কাজ চালিয়ে যেতে সাইন ইন করুন।" : "Sign in to pick up where your team left off.") : (lang === "bn" ? "প্রথমে একাউন্ট তৈরি করুন। কারখানার প্রবেশাধিকার প্রশাসক দেবেন।" : "Create your account. An administrator will arrange your factory access.")}</p>
+        <div className="auth-form-wrap"><span className="eyebrow">{lang === "bn" ? "à¦à¦ªà¦¨à¦¾à¦° à¦à¦¯à¦¼à¦¾à¦°à§à¦à¦¸à§à¦ªà§à¦¸" : "YOUR LINEORA WORKSPACE"}</span><h2>{mode === "login" ? (lang === "bn" ? "à¦à¦¬à¦¾à¦° à¦¸à§à¦¬à¦¾à¦à¦¤à¦®à¥¤" : "Welcome back.") : (lang === "bn" ? "à¦à¦ªà¦¨à¦¾à¦° à¦à¦à¦¾à¦à¦¨à§à¦ à¦¤à§à¦°à¦¿ à¦à¦°à§à¦¨à¥¤" : "Make room for clearer decisions.")}</h2>
+        <p className="auth-description">{mode === "login" ? (lang === "bn" ? "à¦à¦ªà¦¨à¦¾à¦° à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦à¦¾à¦ à¦à¦¾à¦²à¦¿à¦¯à¦¼à§ à¦¯à§à¦¤à§ à¦¸à¦¾à¦à¦¨ à¦à¦¨ à¦à¦°à§à¦¨à¥¤" : "Sign in to pick up where your team left off.") : (lang === "bn" ? "à¦ªà§à¦°à¦¥à¦®à§ à¦à¦à¦¾à¦à¦¨à§à¦ à¦¤à§à¦°à¦¿ à¦à¦°à§à¦¨à¥¤ à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦ªà§à¦°à¦¬à§à¦¶à¦¾à¦§à¦¿à¦à¦¾à¦° à¦ªà§à¦°à¦¶à¦¾à¦¸à¦ à¦¦à§à¦¬à§à¦¨à¥¤" : "Create your account. An administrator will arrange your factory access.")}</p>
 
         <form onSubmit={onSubmit} className="auth-form">
           <div className="auth-mode" aria-label="Account action">
@@ -125,7 +125,7 @@ export default function AuthPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-          /><button type="button" aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}>{showPassword ? (lang === "bn" ? "লুকান" : "Hide password") : (lang === "bn" ? "দেখুন" : "Show password")}</button></div>
+          /><button type="button" aria-pressed={showPassword} onClick={() => setShowPassword(v => !v)}>{showPassword ? (lang === "bn" ? "à¦²à§à¦à¦¾à¦¨" : "Hide password") : (lang === "bn" ? "à¦¦à§à¦à§à¦¨" : "Show password")}</button></div>
 
           {error && <p role="alert" className="error-text">{error}</p>}
 
@@ -133,7 +133,7 @@ export default function AuthPage() {
             {busy ? tr.pleaseWait : mode === "login" ? tr.signIn : tr.createAccount}<Icon name="arrow"/>
           </button>
         </form>
-        <p className="auth-access-note">{supabaseEnabled ? (lang === "bn" ? "কারখানার প্রবেশাধিকার সক্রিয় সদস্যতার ওপর নির্ভর করে।" : "Factory access is limited to your active membership.") : (lang === "bn" ? "ডেভেলপমেন্ট সাইন-ইন। Supabase এখনো কনফিগার করা হয়নি।" : "Development sign-in. Supabase is not configured in this build.")}</p>
+        <p className="auth-access-note">{supabaseEnabled ? (lang === "bn" ? "à¦à¦¾à¦°à¦à¦¾à¦¨à¦¾à¦° à¦ªà§à¦°à¦¬à§à¦¶à¦¾à¦§à¦¿à¦à¦¾à¦° à¦¸à¦à§à¦°à¦¿à¦¯à¦¼ à¦¸à¦¦à¦¸à§à¦¯à¦¤à¦¾à¦° à¦à¦ªà¦° à¦¨à¦¿à¦°à§à¦­à¦° à¦à¦°à§à¥¤" : "Factory access is limited to your active membership.") : (lang === "bn" ? "à¦¡à§à¦­à§à¦²à¦ªà¦®à§à¦¨à§à¦ à¦¸à¦¾à¦à¦¨-à¦à¦¨à¥¤ Supabase à¦à¦à¦¨à§ à¦à¦¨à¦«à¦¿à¦à¦¾à¦° à¦à¦°à¦¾ à¦¹à¦¯à¦¼à¦¨à¦¿à¥¤" : "Development sign-in. Supabase is not configured in this build.")}</p>
         </div>
       </section>
     </main>

@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    app_env: str = "development"  # development | staging | production
     database_url: str = "postgresql+psycopg://mios:mios_dev@localhost:5432/mios"
     jwt_secret: str = "dev-secret"
     jwt_algorithm: str = "HS256"
@@ -26,6 +27,8 @@ class Settings(BaseSettings):
     auth_provider: str = "legacy"  # legacy | supabase; never auto-fallback between them
     supabase_url: str = ""
     supabase_publishable_key: str = ""
+    # Server-only key used by the controlled membership provisioning workflow.
+    supabase_secret_key: str = ""
     dev_bootstrap_schema: bool = False
     production_drafts_enabled: bool = False
     cors_origins: list[str] = []

@@ -1,5 +1,5 @@
 import { API_URL } from "./api";
-import { getAccessToken } from "./supabase";
+import { clearLegacyToken, getAccessToken } from "./supabase";
 
 export type SourceStatus = "ready" | "processing" | "failed";
 export interface KnowledgeSnapshot {
@@ -24,7 +24,7 @@ export async function getKnowledgeSnapshot(
     headers: { Authorization: `Bearer ${token}` }, signal, cache: "no-store",
   });
   if (response.status === 401) {
-    localStorage.removeItem("mios_token");
+    clearLegacyToken();
     throw new Error("SESSION_EXPIRED");
   }
   if (!response.ok) throw new Error("DASHBOARD_UNAVAILABLE");
