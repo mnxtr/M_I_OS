@@ -1,5 +1,5 @@
-"use client";
 
+import { ClipboardCheck, Download, Plus, ScanSearch, WandSparkles } from 'lucide-react';
 import { FormEvent, useEffect, useState } from "react";
 
 import {
@@ -16,11 +16,9 @@ import {
   TemplateInfo,
   updateAssessmentItem,
 } from "@/lib/api";
-import { t } from "@/lib/i18n";
-import { useLang } from "@/lib/useLang";
+import { t, type Lang } from "@/lib/i18n";
 
-export default function CompliancePanel() {
-  const [lang] = useLang();
+export default function CompliancePanel({ lang }: { lang: Lang }) {
   const tr = t(lang);
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const [assessments, setAssessments] = useState<AssessmentInfo[]>([]);
@@ -182,6 +180,7 @@ export default function CompliancePanel() {
             />
           </label>
           <button className="btn btn-primary" disabled={busy || !templateCode || !title.trim()}>
+            <Plus aria-hidden="true" size={16} />
             {busy ? tr.pleaseWait : tr.createAssessment}
           </button>
         </form>
@@ -230,6 +229,7 @@ export default function CompliancePanel() {
                       disabled={busy}
                       onClick={() => void onAutoAssess(assessment.id)}
                     >
+                      <ScanSearch aria-hidden="true" size={15} />
                       {tr.autoAssess}
                     </button>
                     <button
@@ -244,6 +244,7 @@ export default function CompliancePanel() {
                         )
                       }
                     >
+                      <Download aria-hidden="true" size={15} />
                       {tr.binder}
                     </button>
                   </div>
@@ -252,7 +253,7 @@ export default function CompliancePanel() {
             </div>
           ) : (
             <div className="empty-state compact-empty-state">
-              <span className="empty-index">00</span>
+              <span className="empty-index" aria-hidden="true"><ClipboardCheck size={20} /></span>
               <h3>{tr.noAssessments}</h3>
             </div>
           )}
@@ -319,6 +320,7 @@ export default function CompliancePanel() {
                         </select>
                       </label>
                       <button className="btn btn-secondary" onClick={() => void onDraftCap(item)}>
+                        <WandSparkles aria-hidden="true" size={15} />
                         {tr.draftCap}
                       </button>
                     </div>
@@ -328,7 +330,7 @@ export default function CompliancePanel() {
             </div>
           ) : (
             <div className="empty-state compact-empty-state">
-              <span className="empty-index">N/A</span>
+              <span className="empty-index" aria-hidden="true"><ClipboardCheck size={20} /></span>
               <p>{tr.selectItemHint}</p>
             </div>
           )}

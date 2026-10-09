@@ -1,5 +1,5 @@
-"use client";
 
+import { ArrowUpRight, FilePlus2, Send, Trash2 } from 'lucide-react';
 import { FormEvent, RefObject } from "react";
 
 import { ChatMetadata, Citation, DocumentRecord } from "@/lib/api";
@@ -58,6 +58,7 @@ export default function ChatPanel({
         </div>
         {messages.length > 0 ? (
           <button className="btn btn-quiet" onClick={onClear}>
+            <Trash2 aria-hidden="true" size={15} />
             {tr.clearConversation}
           </button>
         ) : null}
@@ -93,6 +94,7 @@ export default function ChatPanel({
             <div className="chat-context-empty">
               <p>{tr.noDocsYet}</p>
               <button className="text-button" onClick={() => onNavigate("knowledge")}>
+                <FilePlus2 aria-hidden="true" size={14} />
                 {tr.addDocument}
               </button>
             </div>
@@ -109,7 +111,8 @@ export default function ChatPanel({
                 <div className="prompt-list">
                   {prompts.map((prompt, index) => (
                     <button key={prompt} onClick={() => onPrompt(prompt)}>
-                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <ArrowUpRight aria-hidden="true" size={16} />
+                      <span className="prompt-index">{String(index + 1).padStart(2, "0")}</span>
                       {prompt}
                     </button>
                   ))}
@@ -206,6 +209,7 @@ export default function ChatPanel({
               }}
             />
             <button className="btn btn-primary" disabled={busy || !question.trim()}>
+              <Send aria-hidden="true" size={16} />
               {busy ? tr.pleaseWait : tr.ask}
             </button>
           </form>

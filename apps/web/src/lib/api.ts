@@ -1,8 +1,25 @@
 import type { User } from "@supabase/supabase-js";
 
-import type { ChatMetadata, ChatResponse, Citation } from "@/lib/chat";
-import { getSupabase } from "@/lib/supabase";
-import type { DashboardFilters, DashboardSnapshot } from "@/lib/dashboard";
+import {
+  createSeededChatResponse,
+  type ChatMetadata,
+  type ChatResponse,
+  type Citation,
+} from '@/lib/chat';
+import {
+  createSeededDashboard,
+  type DashboardFilters,
+  type DashboardSnapshot,
+} from '@/lib/dashboard';
+import { parseChatPayload, validateDashboardDates } from '@/lib/request-validation';
+import { getSupabase } from '@/lib/supabase';
+import { isTestMode } from '@/lib/supabase/config';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+function hasDemoFallback(): boolean {
+  return isTestMode() || import.meta.env.VITE_DEMO_FALLBACK === 'true';
+}
 
 export type { ChatMetadata, ChatResponse, Citation } from "@/lib/chat";
 
@@ -105,36 +122,8 @@ export async function getCurrentUser(): Promise<User | null> {
   return data.user;
 }
 
-export async function login(email: string, password: string): Promise<void> {
-  const { error } = await getSupabase().auth.signInWithPassword({ email, password });
-  if (error) throw new Error(error.message);
-  await provisionPilot();
-}
-
-export async function register(
-  companyName: string,
-  fullName: string,
-  email: string,
-  password: string,
-): Promise<{ requiresEmailConfirmation: boolean }> {
-  const { data, error } = await getSupabase().auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        company_name: companyName.trim(),
-        full_name: fullName.trim(),
-      },
-    },
-  });
-  if (error) throw new Error(error.message);
-
-  const requiresEmailConfirmation = !data.session;
-  if (!requiresEmailConfirmation) await provisionPilot();
-  return { requiresEmailConfirmation };
-}
-
 export async function signOut(): Promise<void> {
+  if (isTestMode()) return;
   const { error } = await getSupabase().auth.signOut();
   if (error) throw new Error(error.message);
   provisionPromise = null;
@@ -144,20 +133,28 @@ export async function fetchDashboard(
   filters: DashboardFilters = {},
 ): Promise<DashboardSnapshot> {
   const params = new URLSearchParams();
-  if (filters.factoryId) params.set("factory_id", filters.factoryId);
-  if (filters.from) params.set("from", filters.from);
-  if (filters.to) params.set("to", filters.to);
-  if (filters.granularity) params.set("granularity", filters.granularity);
-  if (filters.lineId) params.set("line_id", filters.lineId);
-  if (filters.shift) params.set("shift", filters.shift);
-  const response = await fetch(`/api/mios/dashboard?${params.toString()}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("Dashboard data could not be loaded.");
-  return response.json() as Promise<DashboardSnapshot>;
+  if (filters.factoryId) params.set('factory_id', filters.factoryId);
+  if (filters.from) params.set('from', filters.from);
+  if (filters.to) params.set('to', filters.to);
+  if (filters.granularity) params.set('granularity', filters.granularity);
+  if (filters.lineId) params.set('line_id', filters.lineId);
+  if (filters.shift) params.set('shift', filters.shift);
+  validateDashboardDates(params);
+
+  if (isTestMode()) return createSeededDashboard(filters);
+
+  try {
+    const response = await authenticatedFetch(`/v1/dashboard?${params.toString()}`);
+    if (!response.ok) throw new Error(await responseError(response));
+    return response.json() as Promise<DashboardSnapshot>;
+  } catch (error) {
+    if (hasDemoFallback()) return createSeededDashboard(filters);
+    throw error;
+  }
 }
 
 export async function provisionPilot(): Promise<void> {
+  if (isTestMode()) return;
   if (!provisionPromise) {
     const request = getSupabase().rpc("provision_mios_pilot");
     provisionPromise = Promise.resolve(request)
@@ -173,6 +170,7 @@ export async function provisionPilot(): Promise<void> {
 }
 
 export async function fetchDocuments(): Promise<DocumentRecord[]> {
+  if (isTestMode()) return [];
   await provisionPilot();
   const { data, error } = await getSupabase()
     .from("mios_documents")
@@ -216,14 +214,21 @@ export async function uploadDocument(file: File): Promise<void> {
 }
 
 export async function ask(question: string): Promise<ChatResponse> {
-  const response = await fetch("/api/mios/chat", {
-    method: "POST",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, top_k: 8 }),
-  });
-  if (!response.ok) throw new Error(await responseError(response));
-  return response.json() as Promise<ChatResponse>;
+  const payload = parseChatPayload(JSON.stringify({ question, top_k: 8 }));
+  if (isTestMode()) return createSeededChatResponse(payload.question);
+
+  try {
+    const response = await authenticatedFetch('/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(await responseError(response));
+    return response.json() as Promise<ChatResponse>;
+  } catch (error) {
+    if (hasDemoFallback()) return createSeededChatResponse(payload.question);
+    throw error;
+  }
 }
 
 export interface StreamHandlers {
@@ -237,29 +242,56 @@ export async function askStream(
   question: string,
   handlers: StreamHandlers,
 ): Promise<void> {
-  const response = await fetch("/api/mios/chat/stream", {
-    method: "POST",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, top_k: 8 }),
-  });
-  if (!response.ok) throw new Error(await responseError(response));
-  if (!response.body) throw new Error("MIOS returned an empty response stream.");
+  const payload = parseChatPayload(JSON.stringify({ question, top_k: 8 }));
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  const citations: Citation[] = [];
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done });
-    const blocks = buffer.split("\n\n");
-    buffer = blocks.pop() || "";
-    blocks.forEach((block) => handleStreamBlock(block, handlers, citations));
-    if (done) break;
+  if (isTestMode()) {
+    emitSeededAnswer(payload.question, handlers);
+    return;
   }
-  if (buffer.trim()) handleStreamBlock(buffer, handlers, citations);
+
+  try {
+    const response = await authenticatedFetch('/v1/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(await responseError(response));
+    if (!response.body) throw new Error('MIOS returned an empty response stream.');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const citations: Citation[] = [];
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const blocks = buffer.split('\n\n');
+      buffer = blocks.pop() || '';
+      blocks.forEach((block) => handleStreamBlock(block, handlers, citations));
+      if (done) break;
+    }
+    if (buffer.trim()) handleStreamBlock(buffer, handlers, citations);
+  } catch (error) {
+    if (!hasDemoFallback()) throw error;
+    emitSeededAnswer(payload.question, handlers);
+  }
+}
+
+function emitSeededAnswer(question: string, handlers: StreamHandlers): void {
+  const seeded = createSeededChatResponse(question);
+  handlers.onMetadata?.({
+    provider: seeded.provider,
+    model: seeded.model,
+    trace_id: seeded.trace_id,
+    confidence: seeded.confidence,
+    evidence_coverage: seeded.evidence_coverage,
+    freshness: seeded.freshness,
+    suggested_actions: seeded.suggested_actions,
+  });
+  handlers.onCitations?.(seeded.citations);
+  seeded.limitations.forEach((warning) => handlers.onWarning?.(warning));
+  for (const token of seeded.answer.match(/\S+\s*/g) || []) handlers.onToken(token);
 }
 
 function handleStreamBlock(
@@ -288,6 +320,25 @@ function handleStreamBlock(
   }
 }
 
+async function authenticatedFetch(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const { data, error } = await getSupabase().auth.getSession();
+  if (error) throw new Error(error.message);
+
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error('Your session has expired. Please sign in again.');
+
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${accessToken}`);
+  return fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    cache: 'no-store',
+    headers,
+  });
+}
+
 async function responseError(response: Response): Promise<string> {
   const body = await response.text();
   try {
@@ -299,6 +350,7 @@ async function responseError(response: Response): Promise<string> {
 }
 
 export async function listTables(): Promise<TableInfo[]> {
+  if (isTestMode()) return [];
   await provisionPilot();
   const { data, error } = await getSupabase()
     .from("mios_tables")
@@ -312,6 +364,15 @@ export async function runQuery(
   question: string,
   _tableId?: string,
 ): Promise<QueryResult> {
+  if (isTestMode()) {
+    return {
+      answer: 'Line 03 leads the current period at 98.4% attainment.',
+      sql: 'SELECT line, attainment FROM production_summary ORDER BY attainment DESC',
+      columns: ['line', 'attainment'],
+      rows: [{ line: 'Line 03', attainment: 98.4 }],
+      row_count: 1,
+    };
+  }
   await requireUser();
   const { data, error } = await getSupabase()
     .from("mios_analytics_answers")
@@ -330,6 +391,7 @@ export async function runQuery(
 }
 
 export async function listTemplates(): Promise<TemplateInfo[]> {
+  if (isTestMode()) return [];
   const { data, error } = await getSupabase()
     .from("mios_templates")
     .select("code, name, version, description, item_count")
@@ -339,6 +401,7 @@ export async function listTemplates(): Promise<TemplateInfo[]> {
 }
 
 export async function listAssessments(): Promise<AssessmentInfo[]> {
+  if (isTestMode()) return [];
   await provisionPilot();
   const { data, error } = await getSupabase()
     .from("mios_assessments")
@@ -492,6 +555,15 @@ export async function downloadBinder(assessmentId: string): Promise<void> {
 }
 
 export async function fetchUsage(): Promise<UsageInfo> {
+  if (isTestMode()) {
+    return {
+      plan: { code: 'pilot', name: 'Pilot', price_usd: 0 },
+      period: new Date().toISOString().slice(0, 7),
+      usage: { chat_queries: 3, analytics_queries: 1 },
+      limits: { chat_queries: 100, analytics_queries: 50 },
+      estimated_minutes_saved: 101,
+    };
+  }
   await provisionPilot();
   const user = await requireUser();
   const { data, error } = await getSupabase()

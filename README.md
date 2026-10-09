@@ -75,7 +75,7 @@ The goal is not another chatbot. The goal is an **operational intelligence syste
 
 ```mermaid
 flowchart TB
-    U[Factory Users] --> W[Next.js Web App]
+    U[Factory Users] --> W[Vite React SPA]
     W --> API[FastAPI API]
 
     API --> AUTH[Authentication & Tenant Isolation]
@@ -172,7 +172,7 @@ Tenant isolation is treated as a core architectural requirement rather than a UI
 
 ### Application
 
-- **Frontend:** Next.js / React / TypeScript
+- **Frontend:** Vite / React / TypeScript
 - **Backend:** Python / FastAPI
 - **Database:** PostgreSQL
 - **Vector search:** pgvector
@@ -205,7 +205,7 @@ M_I_OS/
 ├── PLAN.md                           # Canonical phased product and delivery plan
 ├── apps/
 │   ├── api/                         # FastAPI backend and intelligence services
-│   └── web/                         # Next.js frontend
+│   └── web/                         # Vite frontend
 │
 ├── packages/
 │   └── shared/                      # Shared types, schemas, and contracts
@@ -285,12 +285,18 @@ npm run dev
 Open:
 
 ```text
-http://localhost:3000
+http://localhost:5173
 ```
+
+For frontend verification, run `npm run lint`, `npm run typecheck`, `npm run build`,
+then `npx playwright install chromium` and `npm test` from `apps/web`. The browser suite uses
+deterministic pilot data without real credentials. See
+[`docs/08-RELEASE-READINESS.md`](docs/08-RELEASE-READINESS.md) for the redesign plan, verified
+fixes, and the remaining production requirements.
 
 The shareable pilot frontend uses Supabase Auth, private object storage, and
 per-user seed provisioning. Add the hosted project URL and publishable key to
-`apps/web/.env.local`; never expose a service-role key in the browser. See
+`apps/web/.env.local`; set `VITE_API_URL` for deployed FastAPI access and never expose a service-role key in the browser. See
 [`docs/07-PILOT-BACKEND-AND-PREVIEW.md`](docs/07-PILOT-BACKEND-AND-PREVIEW.md)
 for the full pilot runbook.
 
@@ -305,7 +311,7 @@ OPENAI_API_KEY=<server-only project key>
 OPENAI_MODEL=gpt-5.6-terra
 ```
 
-The key is read only by FastAPI/Render and must never be placed in a `NEXT_PUBLIC_*` variable or
+The key is read only by FastAPI/Render and must never be placed in a `VITE_*` variable or
 browser bundle. MIOS uses the Responses API for generation and is also designed to support an
 offline development mode using deterministic local embeddings and evidence-only extractive responses
 when external model keys are not configured.

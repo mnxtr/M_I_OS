@@ -99,7 +99,7 @@ Self-serve motion + integrations that shorten time-to-value.
 
 ## 3. Engineering standards
 
-- **Language/stack:** Python 3.12/FastAPI; Next.js 15/React 19 TS. No new frameworks without an ADR.
+- **Language/stack:** Python 3.12/FastAPI; Vite 8/React 19 TS. No new frameworks without an ADR.
 - **Migrations:** alembic-only after baseline; `create_all` exists solely for fresh dev bootstraps.
 - **Testing:** unit tests per pure module (target ≥80% on services/); integration suite gated on `MIOS_TEST_DSN`; golden-set eval gate (>2pt hit@8 regression fails CI). New RAG features ship with eval cases.
 - **Code style:** ruff (E,F,I,UP,B) + ruff format; line length 100. TypeScript strict.

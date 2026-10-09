@@ -108,7 +108,7 @@ retrieval is still pending.
 
 ### Existing stack
 
-- Next.js 15 App Router
+- Vite 8 single-page application
 - React 19
 - TypeScript strict mode
 - Global CSS design tokens and responsive component classes

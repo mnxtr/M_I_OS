@@ -1,4 +1,3 @@
-"use client";
 
 import { Lang } from "@/lib/i18n";
 

@@ -12,6 +12,10 @@ const en = {
   tenantSecure: "Tenant isolated",
   productPrinciples: "Product principles",
   invitationOnly: "Invitation-only access",
+  authMethod: "Authentication method",
+  passwordSignIn: "Password",
+  magicLinkSignIn: "Email link",
+  passwordDescription: "Sign in with your workspace password, or use a secure email link.",
   otpDescription: "Enter your invited work email and we’ll send a secure sign-in link.",
   otpNotice: "If this address has access, a secure sign-in link is on its way.",
   emailSecureLink: "Email secure sign-in link",
@@ -20,6 +24,10 @@ const en = {
   sessionExpired: "Your session expired. Request a new secure link to continue.",
   invalidInvitation: "This sign-in link is invalid or expired. Request a new one below.",
   genericSignInError: "We could not send the sign-in link. Please try again.",
+  invalidCredentials: "Invalid email or password.",
+  emailNotConfirmed: "Confirm your email before signing in.",
+  passwordRequired: "Enter your password to continue.",
+  passwordSignInButton: "Sign in securely",
   signIn: "Sign in",
   welcomeBack: "Welcome back",
   signInDescription: "Continue to your factory intelligence workspace.",
@@ -46,7 +54,7 @@ const en = {
   factoryLabel: "Demo factory",
   operational: "Operational",
   overviewEyebrow: "Factory command center",
-  overviewTitle: "Good morning. Here is what needs attention.",
+  overviewTitle: "Your factory. In focus.",
   overviewCopy:
     "Your factory knowledge, compliance evidence, and production signals in one place.",
   allSystemsReady: "Workspace is ready",
@@ -74,7 +82,7 @@ const en = {
   addDocument: "Add document",
   uploadDoc: "Upload document",
   dropFiles: "Drop a PDF, Word file, or production sheet here",
-  supportedFiles: "PDF, TXT, MD, DOCX, XLSX, and CSV up to the API limit",
+  supportedFiles: "PDF, TXT, MD, DOCX, XLSX, and CSV · up to 15 MB",
   noDocsYet: "No sources yet. Add the documents your team already uses.",
   pages: "pages",
   rows: "rows",
@@ -201,6 +209,10 @@ const bn: Dict = {
   tenantSecure: "টেন্যান্ট সুরক্ষিত",
   productPrinciples: "পণ্যের মূলনীতি",
   invitationOnly: "শুধু আমন্ত্রণের মাধ্যমে প্রবেশ",
+  authMethod: "সাইন-ইন পদ্ধতি",
+  passwordSignIn: "পাসওয়ার্ড",
+  magicLinkSignIn: "ইমেইল লিংক",
+  passwordDescription: "ওয়ার্কস্পেসের পাসওয়ার্ড দিয়ে সাইন ইন করুন, অথবা সুরক্ষিত ইমেইল লিংক ব্যবহার করুন।",
   otpDescription: "আমন্ত্রিত কাজের ইমেইল দিন—আমরা একটি সুরক্ষিত সাইন-ইন লিংক পাঠাব।",
   otpNotice: "এই ঠিকানায় প্রবেশাধিকার থাকলে সুরক্ষিত সাইন-ইন লিংক পাঠানো হয়েছে।",
   emailSecureLink: "সুরক্ষিত সাইন-ইন লিংক পাঠান",
@@ -209,6 +221,10 @@ const bn: Dict = {
   sessionExpired: "আপনার সেশন শেষ হয়েছে। চালিয়ে যেতে নতুন সুরক্ষিত লিংক নিন।",
   invalidInvitation: "এই সাইন-ইন লিংকটি ভুল বা মেয়াদোত্তীর্ণ। নিচে নতুন লিংক নিন।",
   genericSignInError: "সাইন-ইন লিংক পাঠানো যায়নি। আবার চেষ্টা করুন।",
+  invalidCredentials: "ইমেইল বা পাসওয়ার্ড সঠিক নয়।",
+  emailNotConfirmed: "সাইন ইন করার আগে আপনার ইমেইল নিশ্চিত করুন।",
+  passwordRequired: "চালিয়ে যেতে পাসওয়ার্ড দিন।",
+  passwordSignInButton: "নিরাপদে সাইন ইন করুন",
   signIn: "সাইন ইন",
   welcomeBack: "স্বাগতম",
   signInDescription: "আপনার ফ্যাক্টরি ইন্টেলিজেন্স ওয়ার্কস্পেসে প্রবেশ করুন।",
@@ -383,9 +399,11 @@ export const LANG_STORAGE_KEY = "mios_lang";
 
 export function loadLang(): Lang {
   if (typeof window === "undefined") return "en";
-  return localStorage.getItem(LANG_STORAGE_KEY) === "bn" ? "bn" : "en";
+  try { return localStorage.getItem(LANG_STORAGE_KEY) === "bn" ? "bn" : "en"; }
+  catch { return "en"; }
 }
 
 export function saveLang(lang: Lang): void {
-  localStorage.setItem(LANG_STORAGE_KEY, lang);
+  try { localStorage.setItem(LANG_STORAGE_KEY, lang); }
+  catch { /* Language remains usable when browser storage is disabled. */ }
 }
