@@ -33,7 +33,7 @@ def test_bank_transfer_self_confirmation_route_is_not_exposed():
     app = FastAPI()
     app.include_router(payments.router)
 
-    assert not any("mark-paid" in route.path for route in app.routes)
+    assert not any("mark-paid" in route.path for route in payments.router.routes)
     response = TestClient(app).post(f"/v1/payments/{uuid4()}/mark-paid")
     assert response.status_code == 404
 
