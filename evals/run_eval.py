@@ -101,11 +101,17 @@ def main() -> int:
         if line.strip()
     ]
 
+    if not cases:
+        print("Golden-set dataset is empty; refusing to report a passing evaluation.")
+        return 2
+
+    baseline_path = Path(__file__).parent / "baseline.json"
+    if not baseline_path.exists():
+        print("Missing reviewed evals/baseline.json; do not generate one during CI.")
+        return 2
+
     os.environ.setdefault("DATABASE_URL", dsn)
-
-    from app.main import _init_schema  # noqa: F401 — ensure schema exists
-
-    _init_schema()
+    # A retrieval evaluation must never create tables or alter policies on staging.
     report = asyncio.run(evaluate(cases))
 
     print(f"\nGolden-set evaluation ({report['total']} cases)")
@@ -115,18 +121,11 @@ def main() -> int:
         marker = "PASS" if case["hit"] else "MISS"
         print(f"  [{marker}] {case['id']} ({case['lang']}) rank={case['rank']}")
 
-    baseline_path = Path(__file__).parent / "baseline.json"
-    if baseline_path.exists():
-        baseline = json.loads(baseline_path.read_text())
-        delta = report["hit_rate"] - baseline.get("hit_rate", 0)
-        if delta < -0.02:
-            print(f"\nREGRESSION: hit rate dropped {abs(delta):.1%} vs baseline.")
-            return 1
-    else:
-        baseline_path.write_text(
-            json.dumps({"hit_rate": report["hit_rate"], "mrr": report["mrr"]}, indent=2)
-        )
-        print("\nBaseline saved.")
+    baseline = json.loads(baseline_path.read_text())
+    delta = report["hit_rate"] - baseline.get("hit_rate", 0)
+    if delta < -0.02:
+        print(f"\nREGRESSION: hit rate dropped {abs(delta):.1%} vs baseline.")
+        return 1
     return 0
 
 
