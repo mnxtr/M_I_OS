@@ -53,11 +53,24 @@ def _token_out(guest_token: GuestToken) -> GuestTokenOut:
 
 @router.post("/v1/guest-tokens", response_model=GuestTokenOut, status_code=status.HTTP_201_CREATED)
 def create_guest_token(payload: GuestTokenIn, user: CurrentUser, db: DbDep) -> GuestTokenOut:
+    if user.role not in ("owner", "admin"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner or admin required")
     if not payload.scope_all_documents and not payload.document_ids:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "Provide document_ids or set scope_all_documents",
         )
+    if payload.document_ids:
+        permitted_ids = set(
+            db.scalars(
+                select(Document.id).where(
+                    Document.tenant_id == user.tenant_id,
+                    Document.id.in_(payload.document_ids),
+                )
+            ).all()
+        )
+        if permitted_ids != set(payload.document_ids):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
     token = secrets.token_urlsafe(24)
     guest_token = GuestToken(
         token=token,
@@ -75,6 +88,8 @@ def create_guest_token(payload: GuestTokenIn, user: CurrentUser, db: DbDep) -> G
 
 @router.delete("/v1/guest-tokens/{token}", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_guest_token(token: str, user: CurrentUser, db: DbDep) -> None:
+    if user.role not in ("owner", "admin"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner or admin required")
     guest_token = db.get(GuestToken, token)
     if guest_token is None or guest_token.tenant_id != user.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Guest link not found")
