@@ -52,7 +52,9 @@ def test_candidate_baseline_uses_explicit_staging_dsn_without_writing(
         tmp_path,
         [{"id": "q1", "lang": "en", "question": "Production?", "expected_doc": "q.pdf"}],
     )
-    monkeypatch.setattr(sys, "argv", ["run_eval.py", "--candidate-baseline", str(tmp_path / "cases.jsonl")])
+    monkeypatch.setattr(
+        sys, "argv", ["run_eval.py", "--candidate-baseline", str(tmp_path / "cases.jsonl")]
+    )
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://not-the-staging-db")
 
     async def fake_evaluate(cases):
