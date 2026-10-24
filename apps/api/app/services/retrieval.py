@@ -1,5 +1,5 @@
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -19,6 +19,30 @@ class RetrievedChunk:
     score: float
 
 
+def reciprocal_rank_fuse(
+    result_lists: list[list[RetrievedChunk]], top_k: int, rank_constant: int = 60
+) -> list[RetrievedChunk]:
+    """Fuse independent ranked lists fairly; do not carry ranks between modalities."""
+    scores: dict[uuid.UUID, float] = {}
+    first_seen: dict[uuid.UUID, RetrievedChunk] = {}
+    for ranking in result_lists:
+        seen_in_ranking: set[uuid.UUID] = set()
+        for rank, item in enumerate(ranking, start=1):
+            if item.chunk_id in seen_in_ranking:
+                continue
+            seen_in_ranking.add(item.chunk_id)
+            first_seen.setdefault(item.chunk_id, item)
+            scores[item.chunk_id] = scores.get(item.chunk_id, 0.0) + 1.0 / (
+                rank_constant + rank
+            )
+
+    ordered = sorted(scores, key=lambda chunk_id: (-scores[chunk_id], str(chunk_id)))
+    return [
+        replace(first_seen[chunk_id], score=scores[chunk_id])
+        for chunk_id in ordered[:top_k]
+    ]
+
+
 def hybrid_search(
     db: Session, question: str, top_k: int | None = None, variants: list[str] | None = None
 ) -> list[RetrievedChunk]:
@@ -27,8 +51,9 @@ def hybrid_search(
     Tenant isolation comes from the RLS policy set on the session."""
     settings = get_settings()
     k = top_k or settings.retrieve_top_k
-    query_variants = variants or [question]
-    query_variants = [v for v in query_variants if v and v.strip()][:3]
+    query_variants = list(dict.fromkeys(v.strip() for v in (variants or [question]) if v and v.strip()))[:3]
+    if not query_variants:
+        return []
 
     dense_sql = text(
         """
@@ -68,18 +93,10 @@ def hybrid_search(
             for r in rows
         ]
 
-    dense: list[RetrievedChunk] = []
-    keyword: list[RetrievedChunk] = []
+    rankings: list[list[RetrievedChunk]] = []
     for variant in query_variants:
         vector_literal = "[" + ",".join(f"{x:.6f}" for x in embed_texts([variant])[0]) + "]"
-        dense.extend(run(dense_sql, {"vec": vector_literal, "k": k * 2}))
-        keyword.extend(run(keyword_sql, {"q": variant, "k": k * 2}))
+        rankings.append(run(dense_sql, {"vec": vector_literal, "k": k * 2}))
+        rankings.append(run(keyword_sql, {"q": variant, "k": k * 2}))
 
-    fused: dict[uuid.UUID, tuple[float, RetrievedChunk]] = {}
-    for rank, item in enumerate(dense + keyword):
-        weight = 1.0 / (60 + rank)
-        prev_score = fused[item.chunk_id][0] if item.chunk_id in fused else 0.0
-        fused[item.chunk_id] = (prev_score + weight, item)
-
-    ranked = sorted(fused.values(), key=lambda pair: pair[0], reverse=True)
-    return [item for _, item in ranked[:k]]
+    return reciprocal_rank_fuse(rankings, k)
