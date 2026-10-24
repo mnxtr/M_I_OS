@@ -42,3 +42,33 @@ def test_eval_rejects_empty_golden_set_even_with_baseline(monkeypatch, eval_modu
     _configure(monkeypatch, eval_module, tmp_path, [])
     (tmp_path / "baseline.json").write_text('{"hit_rate": 0.8, "mrr": 0.6}')
     assert eval_module.main() == 2
+
+def test_candidate_baseline_uses_explicit_staging_dsn_without_writing(
+    monkeypatch, eval_module, tmp_path, capsys
+):
+    _configure(
+        monkeypatch,
+        eval_module,
+        tmp_path,
+        [{"id": "q1", "lang": "en", "question": "Production?", "expected_doc": "q.pdf"}],
+    )
+    monkeypatch.setattr(sys, "argv", ["run_eval.py", "--candidate-baseline", str(tmp_path / "cases.jsonl")])
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://not-the-staging-db")
+
+    async def fake_evaluate(cases):
+        assert len(cases) == 1
+        return {
+            "total": 1,
+            "hit_rate": 1.0,
+            "mrr": 1.0,
+            "cases": [{"id": "q1", "lang": "en", "hit": True, "rank": 1}],
+        }
+
+    monkeypatch.setattr(eval_module, "evaluate", fake_evaluate)
+    assert eval_module.main() == 0
+    assert "Candidate baseline" in capsys.readouterr().out
+    assert not (tmp_path / "baseline.json").exists()
+    assert (
+        __import__("os").environ["DATABASE_URL"]
+        == "postgresql+psycopg://unused/never_connect"
+    )
