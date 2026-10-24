@@ -5,15 +5,26 @@ on:
     - cron: "0 3 * * *" # 09:00 Dhaka
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   eval:
-    if: github.repository_owner != 'placeholder' # enable once staging DSN secret exists
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Require staging evaluation configuration
+        env:
+          MIOS_TEST_DSN: ${{ secrets.STAGING_DATABASE_URL }}
+          MIOS_EVAL_TENANT_ID: ${{ secrets.STAGING_EVAL_TENANT_ID }}
+        run: |
+          if [ -z "$MIOS_TEST_DSN" ] || [ -z "$MIOS_EVAL_TENANT_ID" ]; then
+            echo "::error::Staging evaluation secrets are missing; retrieval was NOT evaluated."
+            exit 1
+          fi
       - name: Install API
         working-directory: apps/api
         run: pip install -e ".[dev]"
@@ -23,5 +34,4 @@ jobs:
           MIOS_TEST_DSN: ${{ secrets.STAGING_DATABASE_URL }}
           MIOS_EVAL_TENANT_ID: ${{ secrets.STAGING_EVAL_TENANT_ID }}
         run: |
-          if [ -z "$MIOS_TEST_DSN" ]; then echo "STAGING_DATABASE_URL not configured; skipping"; exit 0; fi
           python ../../evals/run_eval.py

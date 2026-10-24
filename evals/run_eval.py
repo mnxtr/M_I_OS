@@ -13,9 +13,9 @@ CI policy: fail if hit@8 regresses more than 2 points vs the stored baseline
 (baseline file: evals/baseline.json).
 """
 
+import argparse
 import asyncio
 import json
-import sys
 from pathlib import Path
 
 DEFAULT_K = 8
@@ -85,11 +85,17 @@ def main() -> int:
         print("Set MIOS_TEST_DSN to a Postgres+pgvector URL with ingested docs.")
         return 2
 
-    cases_path = (
-        Path(sys.argv[1])
-        if len(sys.argv) > 1
-        else Path(__file__).parent / "golden_set.sample.jsonl"
+    parser = argparse.ArgumentParser(description="MIOS staging retrieval quality evaluation")
+    parser.add_argument(
+        "cases_path", nargs="?", default=str(Path(__file__).parent / "golden_set.sample.jsonl")
     )
+    parser.add_argument(
+        "--candidate-baseline",
+        action="store_true",
+        help="Print suggested baseline metrics without modifying any files",
+    )
+    args = parser.parse_args()
+    cases_path = Path(args.cases_path)
     tenant_id = os.environ.get("MIOS_EVAL_TENANT_ID")
     if not tenant_id:
         print("Set MIOS_EVAL_TENANT_ID to the tenant UUID owning the eval documents.")
@@ -101,11 +107,18 @@ def main() -> int:
         if line.strip()
     ]
 
-    os.environ.setdefault("DATABASE_URL", dsn)
+    if not cases:
+        print("Golden-set dataset is empty; refusing to report a passing evaluation.")
+        return 2
 
-    from app.main import _init_schema  # noqa: F401 — ensure schema exists
+    baseline_path = Path(__file__).parent / "baseline.json"
+    if not args.candidate_baseline and not baseline_path.exists():
+        print("Missing reviewed evals/baseline.json; do not generate one during CI.")
+        return 2
 
-    _init_schema()
+    # Always connect to the explicitly selected staging DSN, never inherited DATABASE_URL.
+    os.environ["DATABASE_URL"] = dsn
+    # A retrieval evaluation must never create tables or alter policies on staging.
     report = asyncio.run(evaluate(cases))
 
     print(f"\nGolden-set evaluation ({report['total']} cases)")
@@ -115,18 +128,17 @@ def main() -> int:
         marker = "PASS" if case["hit"] else "MISS"
         print(f"  [{marker}] {case['id']} ({case['lang']}) rank={case['rank']}")
 
-    baseline_path = Path(__file__).parent / "baseline.json"
-    if baseline_path.exists():
-        baseline = json.loads(baseline_path.read_text())
-        delta = report["hit_rate"] - baseline.get("hit_rate", 0)
-        if delta < -0.02:
-            print(f"\nREGRESSION: hit rate dropped {abs(delta):.1%} vs baseline.")
-            return 1
-    else:
-        baseline_path.write_text(
-            json.dumps({"hit_rate": report["hit_rate"], "mrr": report["mrr"]}, indent=2)
-        )
-        print("\nBaseline saved.")
+    if args.candidate_baseline:
+        candidate = {"hit_rate": report["hit_rate"], "mrr": report["mrr"]}
+        print("Candidate baseline (review before committing):")
+        print(json.dumps(candidate, indent=2))
+        return 0
+
+    baseline = json.loads(baseline_path.read_text())
+    delta = report["hit_rate"] - baseline.get("hit_rate", 0)
+    if delta < -0.02:
+        print(f"\nREGRESSION: hit rate dropped {abs(delta):.1%} vs baseline.")
+        return 1
     return 0
 
 
