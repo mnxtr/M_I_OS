@@ -13,9 +13,9 @@ CI policy: fail if hit@8 regresses more than 2 points vs the stored baseline
 (baseline file: evals/baseline.json).
 """
 
+import argparse
 import asyncio
 import json
-import sys
 from pathlib import Path
 
 DEFAULT_K = 8
@@ -85,11 +85,17 @@ def main() -> int:
         print("Set MIOS_TEST_DSN to a Postgres+pgvector URL with ingested docs.")
         return 2
 
-    cases_path = (
-        Path(sys.argv[1])
-        if len(sys.argv) > 1
-        else Path(__file__).parent / "golden_set.sample.jsonl"
+    parser = argparse.ArgumentParser(description="MIOS staging retrieval quality evaluation")
+    parser.add_argument(
+        "cases_path", nargs="?", default=str(Path(__file__).parent / "golden_set.sample.jsonl")
     )
+    parser.add_argument(
+        "--candidate-baseline",
+        action="store_true",
+        help="Print suggested baseline metrics without modifying any files",
+    )
+    args = parser.parse_args()
+    cases_path = Path(args.cases_path)
     tenant_id = os.environ.get("MIOS_EVAL_TENANT_ID")
     if not tenant_id:
         print("Set MIOS_EVAL_TENANT_ID to the tenant UUID owning the eval documents.")
@@ -106,11 +112,12 @@ def main() -> int:
         return 2
 
     baseline_path = Path(__file__).parent / "baseline.json"
-    if not baseline_path.exists():
+    if not args.candidate_baseline and not baseline_path.exists():
         print("Missing reviewed evals/baseline.json; do not generate one during CI.")
         return 2
 
-    os.environ.setdefault("DATABASE_URL", dsn)
+    # Always connect to the explicitly selected staging DSN, never inherited DATABASE_URL.
+    os.environ["DATABASE_URL"] = dsn
     # A retrieval evaluation must never create tables or alter policies on staging.
     report = asyncio.run(evaluate(cases))
 
@@ -120,6 +127,12 @@ def main() -> int:
     for case in report["cases"]:
         marker = "PASS" if case["hit"] else "MISS"
         print(f"  [{marker}] {case['id']} ({case['lang']}) rank={case['rank']}")
+
+    if args.candidate_baseline:
+        candidate = {"hit_rate": report["hit_rate"], "mrr": report["mrr"]}
+        print("Candidate baseline (review before committing):")
+        print(json.dumps(candidate, indent=2))
+        return 0
 
     baseline = json.loads(baseline_path.read_text())
     delta = report["hit_rate"] - baseline.get("hit_rate", 0)
