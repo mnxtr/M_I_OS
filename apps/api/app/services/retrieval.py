@@ -51,7 +51,9 @@ def hybrid_search(
     Tenant isolation comes from the RLS policy set on the session."""
     settings = get_settings()
     k = top_k or settings.retrieve_top_k
-    query_variants = list(dict.fromkeys(v.strip() for v in (variants or [question]) if v and v.strip()))[:3]
+    query_variants = list(
+        dict.fromkeys(v.strip() for v in (variants or [question]) if v and v.strip())
+    )[:3]
     if not query_variants:
         return []
 
