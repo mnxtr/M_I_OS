@@ -443,6 +443,7 @@ export const en = {
       quotaWarning: (metric: string) => `You are close to your ${metric} limit for this month.`,
       quotaReached: (metric: string) =>
         `You have reached your ${metric} limit. Upgrade to continue.`,
+      verificationRequired: "Paid plans are activated only after payment verification.",
       payWithBkash: "Pay with bKash",
       bankTransfer: "Pay by bank transfer",
       invoices: "Invoices",
