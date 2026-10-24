@@ -182,21 +182,3 @@ def download_invoice(payment_id: uuid.UUID, user: CurrentUser, db: DbDep) -> Res
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{payment.invoice_no}.pdf"'},
     )
-
-
-@router.post("/{payment_id}/mark-paid", response_model=PaymentOut)
-def mark_bank_transfer_paid(payment_id: uuid.UUID, user: CurrentUser, db: DbDep) -> PaymentOut:
-    """Manual reconciliation for bank transfers (owner confirms money received)."""
-    if user.role != "owner":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner required")
-    payment = db.get(Payment, payment_id)
-    if payment is None or payment.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
-    payment.provider = "bank_transfer"
-    payment.status = "succeeded"
-    payment.completed_at = datetime.now(UTC)
-    tenant = db.get(Tenant, payment.tenant_id)
-    if tenant is not None:
-        tenant.plan = payment.plan
-    db.flush()
-    return _payment_out(payment)

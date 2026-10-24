@@ -34,10 +34,10 @@ def hybrid_search(
         """
         SELECT c.id, c.document_id, d.filename AS document_name,
                c.page, c.chunk_index, c.content,
-               1 - (c.embedding <=> :vec::vector) AS score
+               1 - (c.embedding <=> CAST(:vec AS vector)) AS score
         FROM chunks c JOIN documents d ON d.id = c.document_id
         WHERE c.embedding IS NOT NULL
-        ORDER BY c.embedding <=> :vec::vector
+        ORDER BY c.embedding <=> CAST(:vec AS vector)
         LIMIT :k
         """
     )

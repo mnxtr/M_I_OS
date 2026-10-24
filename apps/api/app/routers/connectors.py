@@ -22,6 +22,8 @@ def _generate_secret() -> str:
 
 @router.get("/email/secret", response_model=ConnectorSecretOut)
 def get_connector_secret(user: CurrentUser, db: DbDep) -> ConnectorSecretOut:
+    if user.role not in ("owner", "admin"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner or admin required")
     tenant = db.get(Tenant, user.tenant_id)
     if tenant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tenant not found")

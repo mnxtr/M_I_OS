@@ -117,3 +117,13 @@ def test_invoice_pdf_escapes_parentheses():
         usd_to_bdt=120,
     )
     assert rb"\(WEIRD\)" in pdf
+
+def test_tenant_cannot_self_approve_bank_transfer():
+    from app.main import create_app
+
+    routes = {
+        (route.path, method)
+        for route in create_app().routes
+        for method in (getattr(route, "methods", None) or set())
+    }
+    assert ("/v1/payments/{payment_id}/mark-paid", "POST") not in routes
