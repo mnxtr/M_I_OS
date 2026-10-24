@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rootDirectory": "apps/web",
   "framework": "nextjs",
   "regions": ["sin1"],
   "headers": [
