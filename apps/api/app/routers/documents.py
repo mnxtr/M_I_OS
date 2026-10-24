@@ -28,6 +28,18 @@ from app.services.storage import (
 router = APIRouter(prefix="/v1/documents", tags=["documents"])
 
 
+def read_upload_content(file: UploadFile, max_bytes: int) -> bytes:
+    """Bound memory consumption, even if Content-Length is absent or inaccurate."""
+    if max_bytes < 1:
+        raise ValueError("max_bytes must be positive")
+    content = file.file.read(max_bytes + 1)
+    if len(content) > max_bytes:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Document too large")
+    if not content:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty document")
+    return content
+
+
 def dispatch_processing(background, document_id: uuid.UUID) -> None:
     """Route document processing through Celery when enabled; inline otherwise."""
     from app.config import get_settings as gs
@@ -201,6 +213,10 @@ def create_and_store_document(
 ) -> Document:
     """Persist an uploaded file and queue processing. Shared by UI upload and connectors."""
     settings = get_settings()
+    if len(content) > settings.max_upload_bytes:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Document too large")
+    if not content:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty document")
     suffix = Path(filename).suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -251,7 +267,7 @@ def upload(
     doc_type: str = "other",
     department: str = "general",
 ) -> Document:
-    content = file.file.read()
+    content = read_upload_content(file, get_settings().max_upload_bytes)
     return create_and_store_document(
         db=db,
         background=background,
