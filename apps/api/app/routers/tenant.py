@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.deps import CurrentUser, DbDep
 from app.models import Tenant
@@ -30,9 +30,6 @@ class UsageOut(BaseModel):
     estimated_minutes_saved: int
 
 
-class PlanSwitchIn(BaseModel):
-    plan: str = Field(min_length=1, max_length=30)
-
 
 @router.get("/usage", response_model=UsageOut)
 def get_usage(user: CurrentUser, db: DbDep) -> UsageOut:
@@ -46,21 +43,6 @@ def get_usage(user: CurrentUser, db: DbDep) -> UsageOut:
         limits=limits,
         estimated_minutes_saved=estimate_minutes_saved(usage),
     )
-
-
-@router.post("/plan", response_model=PlanOut)
-def switch_plan(payload: PlanSwitchIn, user: CurrentUser, db: DbDep) -> PlanOut:
-    if payload.plan not in PLANS:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Unknown plan. Available: {sorted(PLANS)}",
-        )
-    if user.role != "owner":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can change the plan")
-    tenant = _tenant_of(db, user)
-    tenant.plan = payload.plan
-    db.flush()
-    return _plan_out(tenant.plan)
 
 
 @router.get("/plans", response_model=list[PlanOut])
