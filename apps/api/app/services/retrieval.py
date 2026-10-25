@@ -44,11 +44,19 @@ def reciprocal_rank_fuse(
 
 
 def hybrid_search(
-    db: Session, question: str, top_k: int | None = None, variants: list[str] | None = None
+    db: Session,
+    question: str,
+    top_k: int | None = None,
+    variants: list[str] | None = None,
+    *,
+    tenant_id: uuid.UUID,
 ) -> list[RetrievedChunk]:
-    """Dense (pgvector cosine) + keyword (tsvector) with reciprocal rank fusion.
-    Searches every query variant (e.g. Banglish → English expansion) and fuses.
-    Tenant isolation comes from the RLS policy set on the session."""
+    """Hybrid RRF search with mandatory tenant scoping and ready-document filtering.
+
+    The verified caller supplies tenant_id. Tenant filters are enforced in SQL
+    in addition to transaction RLS, including when the DB connection is privileged.
+    Do not accept a tenant id from a browser request body.
+    """
     settings = get_settings()
     k = top_k or settings.retrieve_top_k
     query_variants = list(
@@ -63,7 +71,10 @@ def hybrid_search(
                c.page, c.chunk_index, c.content,
                1 - (c.embedding <=> CAST(:vec AS vector)) AS score
         FROM chunks c JOIN documents d ON d.id = c.document_id
-        WHERE c.embedding IS NOT NULL
+        WHERE c.tenant_id = CAST(:tenant_id AS uuid)
+          AND d.tenant_id = CAST(:tenant_id AS uuid)
+          AND d.status = 'ready'
+          AND c.embedding IS NOT NULL
         ORDER BY c.embedding <=> CAST(:vec AS vector)
         LIMIT :k
         """
@@ -74,7 +85,10 @@ def hybrid_search(
                c.page, c.chunk_index, c.content,
                ts_rank(c.content_tsv, websearch_to_tsquery('simple', :q)) AS score
         FROM chunks c JOIN documents d ON d.id = c.document_id
-        WHERE c.content_tsv @@ websearch_to_tsquery('simple', :q)
+        WHERE c.tenant_id = CAST(:tenant_id AS uuid)
+          AND d.tenant_id = CAST(:tenant_id AS uuid)
+          AND d.status = 'ready'
+          AND c.content_tsv @@ websearch_to_tsquery('simple', :q)
         ORDER BY score DESC
         LIMIT :k
         """
@@ -98,7 +112,11 @@ def hybrid_search(
     rankings: list[list[RetrievedChunk]] = []
     for variant in query_variants:
         vector_literal = "[" + ",".join(f"{x:.6f}" for x in embed_texts([variant])[0]) + "]"
-        rankings.append(run(dense_sql, {"vec": vector_literal, "k": k * 2}))
-        rankings.append(run(keyword_sql, {"q": variant, "k": k * 2}))
+        rankings.append(
+            run(dense_sql, {"vec": vector_literal, "k": k * 2, "tenant_id": str(tenant_id)})
+        )
+        rankings.append(
+            run(keyword_sql, {"q": variant, "k": k * 2, "tenant_id": str(tenant_id)})
+        )
 
     return reciprocal_rank_fuse(rankings, k)

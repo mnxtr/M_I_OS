@@ -108,7 +108,7 @@ async def judge_item(db, item: AssessmentItem):
 
     Async generator yielding progress events; the final event carries the verdict."""
     query = f"{item.title}. {item.guidance}"
-    chunks = hybrid_search(db, query, top_k=4)
+    chunks = hybrid_search(db, query, top_k=4, tenant_id=item.tenant_id)
     contexts = [
         {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
     ]

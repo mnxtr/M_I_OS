@@ -39,6 +39,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install
         run: npm ci
+      - name: Frontend unit tests (authenticated chat proxy)
+        run: npm run test --workspace mios-web
       - name: Build (type-check included)
         run: npm run build --workspace mios-web
 

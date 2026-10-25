@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerT } from "@/lib/i18n";
 import { LangToggle } from "@/components/layout/LangToggle";
 import { LangMigration } from "@/components/layout/LangMigration";
+import { CopyrightFooter } from "@/components/layout/CopyrightFooter";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const { t } = await getServerT();
@@ -19,6 +20,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <main className="relative z-10 flex flex-1 items-start justify-center px-5 pb-16 pt-8 sm:px-6 sm:pt-16">
         <div className="w-full max-w-md">{children}</div>
       </main>
+      <CopyrightFooter />
     </div>
   );
 }
