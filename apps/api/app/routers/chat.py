@@ -27,7 +27,7 @@ def chat(payload: ChatIn, user: CurrentUser, db: DbDep) -> ChatOut:
     _meter_chat(db, user)
     analysis = expand_query(payload.question)
     chunks = hybrid_search(
-        db, payload.question, payload.top_k, variants=analysis.variants
+        db, payload.question, payload.top_k, variants=analysis.variants, tenant_id=user.tenant_id
     )
 
     contexts = [
@@ -47,7 +47,7 @@ def chat_stream(payload: ChatIn, user: CurrentUser, db: DbDep) -> StreamingRespo
     _meter_chat(db, user)
     analysis = expand_query(payload.question)
     chunks = hybrid_search(
-        db, payload.question, payload.top_k, variants=analysis.variants
+        db, payload.question, payload.top_k, variants=analysis.variants, tenant_id=user.tenant_id
     )
     contexts = [
         {"document_name": c.document_name, "page": c.page, "content": c.content} for c in chunks
