@@ -19,7 +19,7 @@ const ALLOWED_EXTENSIONS = new Set([
   ".jpeg",
 ]);
 
-const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
+const MAX_BYTES = 15 * 1024 * 1024; // Match live private Supabase documents bucket (15 MiB)
 
 const schema = z.object({
   filename: z.string().min(1).max(500),
