@@ -162,7 +162,7 @@ export const bn: Dict = {
     title: "নলেজ বেস",
     subtitle: "এসওপি, অডিট রিপোর্ট, প্রোডাকশন শিট এবং কিউসি রেকর্ড।",
     upload: "ডকুমেন্ট আপলোড",
-    uploadHint: "PDF, DOCX, TXT, Markdown, XLSX, XLSM, CSV, PNG বা JPG। প্রতিটি সর্বোচ্চ ১০০ এমবি।",
+    uploadHint: "PDF, DOCX, TXT, Markdown, XLSX, XLSM, CSV, PNG বা JPG। প্রতিটি সর্বোচ্চ ১৫ এমবি।",
     dropHere: "ফাইল এখানে ছাড়ুন",
     dragOrClick: "ফাইল এখানে টেনে আনুন, বা ক্লিক করে বেছে নিন",
     uploading: "আপলোড হচ্ছে",

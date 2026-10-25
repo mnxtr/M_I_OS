@@ -164,7 +164,7 @@ export const en = {
     title: "Knowledge base",
     subtitle: "SOPs, audit reports, production sheets and QC records.",
     upload: "Upload documents",
-    uploadHint: "PDF, DOCX, TXT, Markdown, XLSX, XLSM, CSV, PNG or JPG. Up to 100 MB each.",
+    uploadHint: "PDF, DOCX, TXT, Markdown, XLSX, XLSM, CSV, PNG or JPG. Up to 15 MB each.",
     dropHere: "Drop files here",
     dragOrClick: "Drag files here, or click to choose",
     uploading: "Uploading",

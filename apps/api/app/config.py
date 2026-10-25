@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7
     storage_dir: str = "./storage"
+    max_upload_bytes: int = 15 * 1024 * 1024  # Pilot Supabase bucket limit; applies to MIME too.
     db_bootstrap: bool = False
     create_vector_extension: bool = False
 
