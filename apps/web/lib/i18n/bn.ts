@@ -439,6 +439,7 @@ export const bn: Dict = {
       quotaWarning: (metric: string) => `এই মাসে আপনার ${metric} সীমার কাছাকাছি চলে এসেছেন।`,
       quotaReached: (metric: string) =>
         `আপনার ${metric} সীমা শেষ হয়ে গেছে। চালিয়ে যেতে প্ল্যান বাড়ান।`,
+      verificationRequired: "পেমেন্ট যাচাই হওয়ার পরেই পেইড প্ল্যান সক্রিয় করা হয়।",
       payWithBkash: "বিকাশে পরিশোধ করুন",
       bankTransfer: "ব্যাংক ট্রান্সফারে পরিশোধ",
       invoices: "ইনভয়েস",

@@ -65,10 +65,13 @@ export function BillingManager({
                   {selected ? <Badge tone="ok">{t.settings.billing.currentPlan}</Badge> : null}
                 </div>
                 <p className="mt-2 text-sm text-muted">{plan.price_usd === 0 ? t.settings.billing.free : t.settings.billing.perMonth(plan.price_usd)}</p>
-                {canChangePlan && !selected ? (
+                {canChangePlan && !selected && plan.price_usd === 0 ? (
                   <Button className="mt-4 w-full" variant="ghost" size="sm" disabled={busyPlan !== null} onClick={() => void onChangePlan(plan.code)}>
                     {busyPlan === plan.code ? t.common.pleaseWait : t.settings.billing.changePlan}
                   </Button>
+                ) : null}
+                {canChangePlan && !selected && plan.price_usd > 0 ? (
+                  <Muted className="mt-4 text-xs">{t.settings.billing.verificationRequired}</Muted>
                 ) : null}
               </div>
             );

@@ -58,6 +58,14 @@ def switch_plan(payload: PlanSwitchIn, user: CurrentUser, db: DbDep) -> PlanOut:
     if user.role != "owner":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the owner can change the plan")
     tenant = _tenant_of(db, user)
+    # Tenant owners cannot grant themselves paid entitlements. Paid plan activation
+    # happens only after server-side payment verification by the payment gateway.
+    # Keep idempotent requests and downgrades to the free trial available.
+    if payload.plan != tenant.plan and payload.plan != DEFAULT_PLAN:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Paid plan changes require verified payment",
+        )
     tenant.plan = payload.plan
     db.flush()
     return _plan_out(tenant.plan)
