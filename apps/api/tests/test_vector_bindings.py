@@ -41,7 +41,10 @@ def test_hybrid_retrieval_binds_vector_and_keyword_params(monkeypatch):
         retrieval, "get_settings", lambda: SimpleNamespace(retrieve_top_k=5)
     )
     session = RecordingSession()
-    assert retrieval.hybrid_search(session, "machine downtime", top_k=3) == []
+    assert retrieval.hybrid_search(
+        session, "machine downtime", top_k=3, tenant_id=uuid.UUID(int=999)
+    ) == []
     assert len(session.calls) == 2
     assert "vec" in session.calls[0][1]
     assert session.calls[1][1]["q"] == "machine downtime"
+    assert all(call[1]["tenant_id"] == str(uuid.UUID(int=999)) for call in session.calls)
