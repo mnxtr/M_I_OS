@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeReturnPath } from "@/lib/auth/redirects";
 
 /**
  * Session refresh + route guard.
@@ -68,13 +69,35 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const publicRoute = isPublic(pathname);
+  const apiRoute = pathname.startsWith("/api/");
+
+  // Supabase may have just refreshed (or deleted) a session cookie in setAll().
+  // Redirects must carry those cookies too, or a valid session can loop through
+  // /login after a successful sign-in or a token refresh.
+  function preserveAuthCookies(nextResponse: NextResponse): NextResponse {
+    for (const cookie of response.cookies.getAll()) {
+      nextResponse.cookies.set(cookie);
+    }
+    for (const key of ["cache-control", "pragma", "expires"]) {
+      const value = response.headers.get(key);
+      if (value) nextResponse.headers.set(key, value);
+    }
+    return nextResponse;
+  }
 
   if (!claims?.sub) {
     if (publicRoute) return response;
+    // API consumers expect machine-readable 401s, never login HTML redirects.
+    if (apiRoute) {
+      return preserveAuthCookies(
+        NextResponse.json({ detail: "Not authenticated" }, { status: 401 }),
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    url.search = "";
+    url.searchParams.set("next", safeReturnPath(pathname + request.nextUrl.search));
+    return preserveAuthCookies(NextResponse.redirect(url));
   }
 
   const tenantId = claims.app_metadata?.tenant_id;
@@ -82,18 +105,24 @@ export async function proxy(request: NextRequest) {
   // Onboarding gate: authenticated but no tenant claim yet. Anything tenant-scoped
   // would render an empty workspace, so send them to finish setup first.
   if (!tenantId && pathname !== "/onboarding" && !publicRoute) {
+    if (apiRoute) {
+      return preserveAuthCookies(
+        NextResponse.json({ detail: "Complete factory onboarding" }, { status: 403 }),
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/onboarding";
     url.search = "";
-    return NextResponse.redirect(url);
+    return preserveAuthCookies(NextResponse.redirect(url));
   }
 
   // Fully onboarded users have no reason to sit on the auth screens.
   if (tenantId && (pathname === "/login" || pathname === "/register" || pathname === "/onboarding")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
+    const destination = pathname === "/login"
+      ? safeReturnPath(request.nextUrl.searchParams.get("next"))
+      : "/dashboard";
+    const url = new URL(destination, request.url);
+    return preserveAuthCookies(NextResponse.redirect(url));
   }
 
   return response;

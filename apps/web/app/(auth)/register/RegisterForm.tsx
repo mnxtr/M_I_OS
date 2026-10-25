@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
+import { authCallbackUrl } from "@/lib/auth/redirects";
 import { useT } from "@/lib/i18n/useT";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export function RegisterForm() {
             full_name: parsed.data.fullName,
             pending_company_name: parsed.data.companyName,
           },
-          emailRedirectTo: `${window.location.origin}/callback?next=/onboarding`,
+          emailRedirectTo: authCallbackUrl(window.location.origin, "/onboarding"),
         },
       });
       if (authError) {
