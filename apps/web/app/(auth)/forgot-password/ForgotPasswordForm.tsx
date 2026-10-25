@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { authCallbackUrl } from "@/lib/auth/redirects";
 import { useT } from "@/lib/i18n/useT";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export function ForgotPasswordForm() {
     try {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/callback?next=/reset`,
+        redirectTo: authCallbackUrl(window.location.origin, "/reset"),
       });
       // Do not distinguish "no such user" — that would confirm account existence.
       if (authError && authError.status === 429) {
