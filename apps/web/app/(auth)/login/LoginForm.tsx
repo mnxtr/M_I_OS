@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { authCallbackUrl, safeReturnPath } from "@/lib/auth/redirects";
 import { useT } from "@/lib/i18n/useT";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export function LoginForm() {
         return;
       }
       // The proxy decides between /onboarding and the workspace from the tenant claim.
-      router.replace(nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard");
+      router.replace(safeReturnPath(nextPath));
     } catch (cause) {
       setError(authErrorMessage(cause, t));
     } finally {
@@ -57,7 +58,10 @@ export function LoginForm() {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: authCallbackUrl(window.location.origin, safeReturnPath(nextPath)),
+        },
       });
       if (authError) {
         setError(authErrorMessage(authError, t));
