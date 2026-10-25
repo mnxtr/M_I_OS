@@ -56,7 +56,9 @@ def test_chat_uses_authenticated_tenant_not_request_data(monkeypatch):
         return []
 
     monkeypatch.setattr(chat, "hybrid_search", retrieve)
-    monkeypatch.setattr(chat, "generate_answer", lambda question, contexts: ("No data", "no-evidence"))
+    monkeypatch.setattr(
+        chat, "generate_answer", lambda question, contexts: ("No data", "no-evidence")
+    )
     user = SimpleNamespace(tenant_id=tenant_id)
     result = chat.chat(ChatIn(question="Line 7 downtime?"), user, db=object())
     assert result.citations == []
