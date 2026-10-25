@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getServerT } from "@/lib/i18n";
+import { CopyrightFooter } from "@/components/layout/CopyrightFooter";
 
 export const metadata: Metadata = {
   title: "Shared documents",
@@ -17,7 +18,7 @@ export default async function GuestLayout({ children }: { children: React.ReactN
   const { t } = await getServerT();
 
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-6 py-4">
           <span className="text-base font-semibold text-fg">{t.brand.name}</span>
@@ -26,7 +27,8 @@ export default async function GuestLayout({ children }: { children: React.ReactN
           </span>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-6 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">{children}</main>
+      <CopyrightFooter />
     </div>
   );
 }
