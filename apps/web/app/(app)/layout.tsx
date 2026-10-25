@@ -4,6 +4,7 @@ import { getServerT } from "@/lib/i18n";
 import { TenantHeader } from "@/components/layout/TenantHeader";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { LangMigration } from "@/components/layout/LangMigration";
+import { CopyrightFooter } from "@/components/layout/CopyrightFooter";
 import type { UsageInfo } from "@mios/shared";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+      <CopyrightFooter />
     </div>
   );
 }

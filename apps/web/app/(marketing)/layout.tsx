@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerT } from "@/lib/i18n";
 import { LangToggle } from "@/components/layout/LangToggle";
 import { LangMigration } from "@/components/layout/LangMigration";
+import { CopyrightFooter } from "@/components/layout/CopyrightFooter";
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const { t } = await getServerT();
@@ -49,6 +50,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
           <span className="mios-eyebrow text-[0.58rem]">{t.brand.name} / 01</span>
         </div>
       </footer>
+      <CopyrightFooter />
     </div>
   );
 }
