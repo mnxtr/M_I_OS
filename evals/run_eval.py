@@ -16,6 +16,7 @@ CI policy: fail if hit@8 regresses more than 2 points vs the stored baseline
 import asyncio
 import json
 import sys
+import uuid
 from pathlib import Path
 
 DEFAULT_K = 8
@@ -71,8 +72,9 @@ def _run_with_tenant(tenant_id: str, question: str, variants: list[str], k: int)
 
     db = SessionLocal()
     try:
-        set_tenant(db, tenant_id)
-        return hybrid_search(db, question, k, variants=variants)
+        verified_tenant = uuid.UUID(str(tenant_id))
+        set_tenant(db, verified_tenant)
+        return hybrid_search(db, question, k, variants=variants, tenant_id=verified_tenant)
     finally:
         db.close()
 
