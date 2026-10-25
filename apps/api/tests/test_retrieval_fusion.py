@@ -87,7 +87,8 @@ def test_hybrid_search_keeps_rank_lists_separate(monkeypatch):
             ])
 
     result = retrieval.hybrid_search(
-        FakeSession(), "factory output", top_k=2, variants=["factory output", "output"]
+        FakeSession(), "factory output", top_k=2, variants=["factory output", "output"],
+        tenant_id=uuid.UUID(int=999),
     )
     assert len(result) == 2
     assert result[0].score == pytest.approx(result[1].score)
