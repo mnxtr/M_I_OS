@@ -22,6 +22,8 @@ def _generate_secret() -> str:
 
 @router.get("/email/secret", response_model=ConnectorSecretOut)
 def get_connector_secret(user: CurrentUser, db: DbDep) -> ConnectorSecretOut:
+    if user.role not in ("owner", "admin"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Owner or admin required")
     tenant = db.get(Tenant, user.tenant_id)
     if tenant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tenant not found")
@@ -63,7 +65,15 @@ async def email_inbound(
     if tenant is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid connector secret")
 
-    raw = await request.body()
+    from app.config import get_settings
+
+    max_bytes = get_settings().max_upload_bytes
+    raw_buffer = bytearray()
+    async for chunk in request.stream():
+        if len(raw_buffer) + len(chunk) > max_bytes:
+            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Email too large")
+        raw_buffer.extend(chunk)
+    raw = bytes(raw_buffer)
     if not raw:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "Empty body — send raw MIME email"
