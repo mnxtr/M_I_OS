@@ -14,6 +14,7 @@ const RETURN_ROUTES = new Set([
   "quality",
   "settings",
   "onboarding",
+  "reset",
 ]);
 
 const VALIDATION_ORIGIN = "https://linora.invalid";
