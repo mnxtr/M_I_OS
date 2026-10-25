@@ -761,6 +761,33 @@ Deletions: `JWT_SECRET`, `JWT_ALGORITHM`, `JWT_EXPIRE_MINUTES` (Supabase owns to
 
 **Project settings:** Root Directory `apps/web`, "Include files outside root directory" **on** (needs `packages/shared`), framework preset Next.js, Node 22.
 
+Set Root Directory under Vercel **Project Settings → Build and Deployment**.
+`rootDirectory` is a project setting, not a supported `vercel.json` property;
+adding it to either configuration file causes schema validation to fail before
+the build starts. With `apps/web` selected, Vercel uses `apps/web/vercel.json`.
+Keep the repository-root `vercel.json` schema-valid as well; neither file selects
+the project root. Leave Build Command and Output Directory on the Next.js
+defaults (`npm run build` and `.next`) relative to `apps/web`, and install from
+the repository's root npm workspace lockfile.
+
+To verify locally from the repository root:
+
+```bash
+npm ci
+npm run build
+# Equivalent app-directory build path:
+npm --prefix apps/web run build
+# Separate public-site build used by GitHub Pages:
+npm run build:github-pages --workspace mios-web
+```
+
+For the October 24, 2026 preview failures, apply the same one-line removal to
+`audit/phase3-bounded-ingestion-2026-10-24` and
+`audit/phase4-evaluation-gates-2026-10-24` (or propagate it through their stacked
+PR bases). Verify the project settings above before retrying each branch's
+preview; an old failed deployment will not be repaired by a later config change.
+Check that the new deployment passes configuration validation and reaches READY.
+
 ```json
 // apps/web/vercel.json
 {
