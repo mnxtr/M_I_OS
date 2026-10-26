@@ -8,7 +8,14 @@ const nextConfig: NextConfig = {
   // Preserve bookmarks from older MIOS/Linora site builds. Canonical auth and
   // navigation endpoints live at the root of the Next.js app.
   async redirects() {
+    // Heroku can serve the same authenticated Next.js app on a dedicated
+    // compliance hostname without redirecting other production domains.
+    const complianceHost = process.env.COMPLIANCE_HOSTNAME;
+    const complianceHome = complianceHost && /^[a-z0-9.-]+$/i.test(complianceHost)
+      ? [{ source: "/", has: [{ type: "host" as const, value: complianceHost }], destination: "/compliance", permanent: false }]
+      : [];
     return [
+      ...complianceHome,
       { source: "/signin", destination: "/login", permanent: true },
       { source: "/sign-in", destination: "/login", permanent: true },
       { source: "/signup", destination: "/register", permanent: true },
