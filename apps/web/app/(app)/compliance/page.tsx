@@ -90,19 +90,19 @@ export default async function CompliancePage({ searchParams }: Props) {
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl border border-accent/15 bg-bg/65 p-6">
             <div className="relative size-40">
-              <svg viewBox="0 0 120 120" className="size-full -rotate-90" role="img" aria-label={`${overview.completionPercent}% of checklist requirements reviewed`}>
+              <svg viewBox="0 0 120 120" className="size-full -rotate-90" role="img" aria-label={`${overview.completionPercent}% of checklist requirements with an assigned status`}>
                 <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="9" className="text-border" />
                 <circle cx="60" cy="60" r="50" fill="none" stroke="#73f6d2" strokeLinecap="round" strokeWidth="9" pathLength="100"
                   strokeDasharray={`${overview.completionPercent} 100`} />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="font-mono text-4xl font-semibold tracking-tight text-fg">{overview.completionPercent}%</span>
-                <span className="text-[10px] font-semibold uppercase tracking-[.18em] text-muted">Reviewed</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[.18em] text-muted">Assessed</span>
               </div>
             </div>
             <p className="mt-1 text-center text-xs leading-5 text-muted">
               {overview.requirements > 0
-                ? `${overview.assessed} of ${overview.requirements} checklist requirements`
+                ? `${overview.assessed} of ${overview.requirements} checklist requirements with statuses`
                 : "Create an assessment to begin."}
             </p>
             <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-accent/70">Progress, not certification</p>
