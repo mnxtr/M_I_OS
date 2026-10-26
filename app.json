@@ -4,7 +4,9 @@
   "website": "https://github.com/mnxtr/M_I_OS",
   "stack": "heroku-24",
   "buildpacks": [
-    { "url": "heroku/nodejs" }
+    {
+      "url": "heroku/nodejs"
+    }
   ],
   "env": {
     "COMPLIANCE_PORTAL_MODE": {
@@ -30,6 +32,10 @@
     "GROQ_API_KEY": {
       "description": "Optional server-only Groq token; manual workflows function without it.",
       "required": false
+    },
+    "NEXT_PUBLIC_COMPLIANCE_PORTAL_MODE": {
+      "description": "Use the compliance portal as the default destination after login.",
+      "value": "true"
     }
   }
 }
