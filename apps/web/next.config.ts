@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   // navigation endpoints live at the root of the Next.js app.
   async redirects() {
     return [
+      ...(process.env.COMPLIANCE_PORTAL_MODE === "true"
+        ? [{ source: "/", destination: "/compliance", permanent: false }]
+        : []),
       { source: "/signin", destination: "/login", permanent: true },
       { source: "/sign-in", destination: "/login", permanent: true },
       { source: "/signup", destination: "/register", permanent: true },

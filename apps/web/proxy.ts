@@ -29,6 +29,11 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Heroku router and uptime checks must not require a valid user session.
+  // This endpoint exposes only an application heartbeat, no tenant data.
+  if (request.nextUrl.pathname === "/api/health") {
+    return NextResponse.next({ request });
+  }
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

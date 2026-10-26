@@ -1,0 +1,41 @@
+{
+  "name": "linora-compliance",
+  "description": "Linora compliance intelligence portal, backed by the existing authenticated Next.js application.",
+  "website": "https://github.com/mnxtr/M_I_OS",
+  "stack": "heroku-24",
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "COMPLIANCE_PORTAL_MODE": {
+      "description": "Use the compliance workspace as the root landing page.",
+      "value": "true"
+    },
+    "NEXT_PUBLIC_SUPABASE_URL": {
+      "description": "HTTPS Supabase project URL. Public configuration; required at build time.",
+      "required": true
+    },
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": {
+      "description": "Supabase publishable browser key (never use a secret role key here).",
+      "required": true
+    },
+    "SUPABASE_SECRET_KEY": {
+      "description": "Server-only key for tenant-scoped compliance writes. Never prefix with NEXT_PUBLIC_.",
+      "required": true
+    },
+    "NEXT_PUBLIC_SITE_URL": {
+      "description": "The canonical HTTPS origin used for Supabase Auth callbacks.",
+      "required": true
+    },
+    "GROQ_API_KEY": {
+      "description": "Optional server-only Groq token; manual workflows function without it.",
+      "required": false
+    },
+    "NEXT_PUBLIC_COMPLIANCE_PORTAL_MODE": {
+      "description": "Use the compliance portal as the default destination after login.",
+      "value": "true"
+    }
+  }
+}

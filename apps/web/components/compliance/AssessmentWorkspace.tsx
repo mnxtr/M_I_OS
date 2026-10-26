@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Play, FileArchive, Sparkles, Unlock } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +42,12 @@ export function AssessmentWorkspace({
   const [assessed, setAssessed] = useState(0);
   const [total, setTotal] = useState(0);
   const [binderBusy, setBinderBusy] = useState(false);
+
+  // After streamed assessment finishes, router.refresh() brings back the authoritative
+  // evidence and AI notes. Sync those server rows instead of retaining stale state.
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
 

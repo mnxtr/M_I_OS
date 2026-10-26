@@ -34,6 +34,12 @@ describe("safeReturnPath", () => {
 describe("authCallbackUrl", () => {
   afterEach(() => vi.unstubAllEnvs());
 
+  it("defaults to compliance when hosted in compliance portal mode", () => {
+    vi.stubEnv("NEXT_PUBLIC_COMPLIANCE_PORTAL_MODE", "true");
+    expect(safeReturnPath(null)).toBe("/compliance");
+    expect(safeReturnPath("//untrusted.example")).toBe("/compliance");
+  });
+
   it("routes signup and recovery emails to the canonical site origin", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://mios-manufacturing-pilot.vercel.app");
     expect(authCallbackUrl("https://preview.example", "/reset")).toBe(
