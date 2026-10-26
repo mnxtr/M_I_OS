@@ -70,6 +70,15 @@ export async function POST(_request: Request, { params }: { params: Promise<{ as
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      // Heroku uses a rolling 55-second inactivity timeout for streamed responses.
+      // An SSE heartbeat keeps the UI and router informed during slower model calls.
+      const heartbeat = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(frame({ type: "heartbeat" })));
+        } catch {
+          clearInterval(heartbeat);
+        }
+      }, 15000);
       controller.enqueue(encoder.encode(frame({ type: "start", total: assessable.length })));
       try {
         const processedIds = new Set<string>();
@@ -116,6 +125,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ as
       } catch (cause) {
         controller.enqueue(encoder.encode(frame({ type: "error", ref: "assessment", detail: cause instanceof Error ? cause.message.slice(0, 200) : "Assessment failed" })));
         controller.close();
+      } finally {
+        clearInterval(heartbeat);
       }
     },
   });
