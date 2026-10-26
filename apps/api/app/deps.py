@@ -50,6 +50,8 @@ def _profile_from_supabase(db: Session, payload: dict) -> AuthenticatedUser:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
 
     app_metadata = payload.get("app_metadata") or {}
+    if not isinstance(app_metadata, dict):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid Supabase app metadata")
     claim_tenant = app_metadata.get("tenant_id")
     if claim_tenant and str(profile["tenant_id"]) != str(claim_tenant):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Tenant claim does not match profile")
