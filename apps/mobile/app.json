@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Linora",
+    "slug": "linora",
+    "scheme": "linora",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-router"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.linora.mobile"
+    },
+    "android": {
+      "package": "com.linora.mobile"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
