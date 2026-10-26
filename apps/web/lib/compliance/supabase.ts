@@ -3,7 +3,7 @@ import "server-only";
 import type { AssessmentInfo, AssessmentItemRecord, Citation, ItemStatus, TemplateInfo } from "@mios/shared";
 import { getClaims } from "@/lib/supabase/claims";
 import { createClient } from "@/lib/supabase/server";
-import { ensureChecklistTemplates } from "./templates";
+import { DEFAULT_CHECKLISTS } from "./templates";
 
 type Row = Record<string, unknown>;
 
@@ -60,20 +60,34 @@ export function complianceAssessmentOut(row: Row, itemRows: Row[]): AssessmentIn
 }
 
 export async function listComplianceTemplatesSupabase(): Promise<TemplateInfo[]> {
-  await ensureChecklistTemplates();
+  // Listing templates must never require a privileged write or service-role secret.
+  // The built-in checklists stay visible even if an older deployment never seeded them.
+  const defaults: TemplateInfo[] = DEFAULT_CHECKLISTS.map((template) => ({
+    code: template.code,
+    name: template.name,
+    version: template.version,
+    description: template.description,
+    item_count: template.items.length,
+  }));
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("checklist_templates")
     .select("code,name,version,description,items")
     .order("code");
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((template) => ({
-    code: template.code,
-    name: template.name,
-    version: Number(template.version ?? 1),
-    description: template.description ?? "",
-    item_count: Array.isArray(template.items) ? template.items.length : 0,
-  }));
+  if (error) return defaults;
+
+  const byCode = new Map(defaults.map((template) => [template.code, template]));
+  for (const template of data ?? []) {
+    byCode.set(template.code, {
+      code: template.code,
+      name: template.name,
+      version: Number(template.version ?? 1),
+      description: template.description ?? "",
+      item_count: Array.isArray(template.items) ? template.items.length : 0,
+    });
+  }
+  return [...byCode.values()];
 }
 
 export async function listComplianceAssessmentsSupabase(): Promise<AssessmentInfo[]> {
