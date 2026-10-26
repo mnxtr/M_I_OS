@@ -1,4 +1,5 @@
 import { assessComplianceItem, type ComplianceVerdict } from "@/lib/groq";
+import { requireHumanReview } from "@/lib/compliance/review";
 import { getClaims } from "@/lib/supabase/claims";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -71,6 +72,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ as
     async start(controller) {
       controller.enqueue(encoder.encode(frame({ type: "start", total: assessable.length })));
       try {
+        const processedIds = new Set<string>();
         for (const item of assessable) {
           controller.enqueue(encoder.encode(frame({ type: "progress", ref: item.ref })));
           const evidence = relevantEvidence(item, (chunks ?? []) as Chunk[], names);
@@ -88,6 +90,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ as
               // Fall back to the evidence-bound deterministic verdict.
             }
           }
+          // Even strong document matches require human review; AI must not certify.
+          verdict = requireHumanReview(verdict);
           const citations = verdict.quote && evidence.length
             ? [{ ...evidence[0], snippet: verdict.quote }]
             : evidence.slice(0, 2).map(({ content, ...citation }) => ({ ...citation, snippet: content.slice(0, 320) }));
@@ -98,10 +102,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ as
             updated_at: new Date().toISOString(),
           }).eq("id", item.id).eq("tenant_id", claims.tenantId);
           if (error) controller.enqueue(encoder.encode(frame({ type: "error", ref: item.ref, detail: error.message })));
-          else controller.enqueue(encoder.encode(frame({ type: "verdict", ref: item.ref, status: verdict.status })));
+          else {
+            processedIds.add(item.id);
+            controller.enqueue(encoder.encode(frame({ type: "verdict", ref: item.ref, status: verdict.status })));
+          }
         }
         const allItems = (items ?? []) as AssessmentItem[];
-        const isComplete = allItems.length > 0 && allItems.every((item) => item.manually_set || item.status !== "pending" || assessable.some((current) => current.id === item.id));
+        const isComplete = allItems.length > 0 && allItems.every((item) => item.manually_set || item.status !== "pending" || processedIds.has(item.id));
         const status = isComplete ? "complete" : "partial";
         await admin.from("assessments").update({ status }).eq("id", assessment.id).eq("tenant_id", claims.tenantId);
         controller.enqueue(encoder.encode(frame({ type: "done", status })));
