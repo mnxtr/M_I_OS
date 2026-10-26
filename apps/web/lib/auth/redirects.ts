@@ -19,6 +19,9 @@ const RETURN_ROUTES = new Set([
 
 const VALIDATION_ORIGIN = "https://linora.invalid";
 
+const defaultReturnPath = () =>
+  process.env.NEXT_PUBLIC_COMPLIANCE_PORTAL_MODE === "true" ? "/compliance" : "/dashboard";
+
 export function safeReturnPath(raw: string | null | undefined): string {
   if (
     !raw ||
@@ -27,23 +30,23 @@ export function safeReturnPath(raw: string | null | undefined): string {
     raw.startsWith("//") ||
     /[\\\u0000-\u001f\u007f]/.test(raw)
   ) {
-    return "/dashboard";
+    return defaultReturnPath();
   }
 
   // WHATWG URLs can interpret encoded separators and backslashes unexpectedly.
   const pathPart = raw.split(/[?#]/, 1)[0] ?? "";
-  if (/%(?:2f|5c|00)/i.test(pathPart)) return "/dashboard";
+  if (/%(?:2f|5c|00)/i.test(pathPart)) return defaultReturnPath();
 
   try {
     const url = new URL(raw, VALIDATION_ORIGIN);
-    if (url.origin !== VALIDATION_ORIGIN || url.hash) return "/dashboard";
+    if (url.origin !== VALIDATION_ORIGIN || url.hash) return defaultReturnPath();
     const firstSegment = url.pathname.split("/")[1];
     if (!firstSegment || !RETURN_ROUTES.has(firstSegment)) {
-      return "/dashboard";
+      return defaultReturnPath();
     }
     return url.pathname + url.search;
   } catch {
-    return "/dashboard";
+    return defaultReturnPath();
   }
 }
 
