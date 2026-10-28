@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PORTALS, PORTAL_SECTIONS, canonicalAppOrigin, getPortal,
-  isPortalSection, portalPublicRewrite, resolvePortalHost, workspaceUrl,
+  isPortalSection, isUnassignedPortalHost, portalPublicRewrite, resolvePortalHost, workspaceUrl,
 } from "@/lib/portals/catalog";
 
 describe("Linora module catalog", () => {
@@ -46,6 +46,16 @@ describe("Linora exact-host public portal rewriting", () => {
     expect(resolvePortalHost("ask.vercel.app", "vercel.app")).toBe(null);
     expect(resolvePortalHost("ask.linora.ai", "*.linora.ai")).toBe(null);
   });
+  it("reserves all other company-brand hosts rather than exposing auth or API", () => {
+    for (const host of ["api.linora.ai", "unknown.linora.ai", "docs.linora.ai", "nested.ask.linora.ai"]) {
+      expect(isUnassignedPortalHost(host, domain)).toBe(true);
+    }
+    expect(isUnassignedPortalHost("ask.linora.ai", domain)).toBe(false);
+    expect(isUnassignedPortalHost("linora.ai", domain)).toBe(false);
+    expect(isUnassignedPortalHost("ask.linora.ai.attacker.example", domain)).toBe(false);
+    expect(isUnassignedPortalHost("api.linora.ai", undefined)).toBe(false);
+  });
+
   it("does not rewrite protected app paths, APIs, or login", () => {
     for (const path of ["/api/compliance", "/compliance", "/ask", "/knowledge", "/login", "/onboarding", "/billing", "/demo/private", "/trust/extra"]) {
       expect(portalPublicRewrite("ask.linora.ai", path, domain)).toBeNull();
