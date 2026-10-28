@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowUpRight, Layers3 } from "lucide-react";
 import { canonicalAppOrigin } from "@/lib/portals/catalog";
@@ -13,17 +12,17 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
       </a>
       <header className="sticky top-0 z-40 border-b border-[#244047] bg-[#071013]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <Link href="/portals" aria-label="Linora MIOS product suite" className="flex items-center gap-3">
+          <a href={site + "/portals"} aria-label="Linora MIOS product suite" className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-xl border border-[#73f6d2]/40 bg-[#10262a] text-lg font-black tracking-[-.08em] text-[#73f6d2]">L.</span>
             <span>
               <span className="block text-base font-bold tracking-[.20em] text-[#eaf8f4]">LINORA</span>
               <span className="block font-mono text-[.55rem] tracking-[.18em] text-[#8ea9ad]">MANUFACTURING INTELLIGENCE</span>
             </span>
-          </Link>
+          </a>
           <nav className="flex flex-wrap items-center gap-2 text-xs sm:text-sm" aria-label="Portal navigation">
-            <Link href="/portals" className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-[#bacdd0] hover:bg-[#142b30] hover:text-white">
+            <a href={site + "/portals"} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-[#bacdd0] hover:bg-[#142b30] hover:text-white">
               <Layers3 size={15} /> Product suite
-            </Link>
+            </a>
             <a href={site + "/login"} className="flex min-h-11 items-center gap-1 rounded-lg border border-[#39585e] px-4 font-semibold text-[#eaf8f4] hover:border-[#73f6d2]">
               Sign in <ArrowUpRight size={15} />
             </a>
