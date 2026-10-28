@@ -20,10 +20,13 @@ import { Badge, EmptyState, ErrorBanner, Panel } from "@/components/ui/panel";
 type ActionChange = Partial<Pick<ComplianceAction, "status" | "priority" | "assigned_to" | "due_date" | "notes">>;
 type Filter = "all" | "attention" | "resolved";
 
-async function parseApiResponse(response: Response): Promise<any> {
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(typeof result.detail === "string" ? result.detail : "Request failed");
-  return result;
+async function parseApiResponse(response: Response): Promise<ComplianceAction> {
+  const result: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const details = result && typeof result === "object" ? result as Record<string, unknown> : {};
+    throw new Error(typeof details.detail === "string" ? details.detail : "Request failed");
+  }
+  return result as ComplianceAction;
 }
 
 const labels: Record<ActionStatus, string> = {
@@ -276,7 +279,10 @@ function ActionCard({ action, owners, today, onPatch }: {
         <div className="space-y-1">
           <Label htmlFor={"status-" + action.id}>Progress</Label>
           <Select className={selectStyle} id={"status-" + action.id} disabled={busy} value={action.status}
-            onChange={(e) => void update({ status: e.target.value as ActionStatus })}>
+            onChange={(e) => void update({
+              status: e.target.value as ActionStatus,
+              ...(e.target.value === "resolved" && notes !== action.notes ? { notes } : {}),
+            })}>
             {ACTION_STATUSES.map((option) => <option key={option} value={option}>{labels[option]}</option>)}
           </Select>
         </div>
