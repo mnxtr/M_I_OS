@@ -26,7 +26,7 @@ export default function ComplianceError({
         <AlertTriangle aria-hidden="true" className="size-8 text-warn" />
         <h1 className="mt-5 text-xl font-semibold text-fg">Compliance is temporarily unavailable</h1>
         <p className="mt-2 text-sm leading-6 text-muted">
-          Your compliance records have not been modified. Please try again.
+          The page could not be displayed. Please try again.
           If the problem continues, share the reference below with your administrator.
         </p>
         {error.digest ? (
