@@ -3,7 +3,6 @@ import "server-only";
 import type { AssessmentInfo, AssessmentItemRecord, Citation, ItemStatus, TemplateInfo } from "@mios/shared";
 import { getClaims } from "@/lib/supabase/claims";
 import { createClient } from "@/lib/supabase/server";
-import { ensureChecklistTemplates } from "./templates";
 
 type Row = Record<string, unknown>;
 
@@ -60,7 +59,8 @@ export function complianceAssessmentOut(row: Row, itemRows: Row[]): AssessmentIn
 }
 
 export async function listComplianceTemplatesSupabase(): Promise<TemplateInfo[]> {
-  await ensureChecklistTemplates();
+  // Templates are provisioned through reviewed database setup, not on each GET.
+  // A read must not require SUPABASE_SECRET_KEY or mutate shared production data.
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("checklist_templates")
