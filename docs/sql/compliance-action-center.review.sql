@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.compliance_actions (
   CONSTRAINT mios_compliance_action_assignee_tenant_fk FOREIGN KEY (assigned_to,tenant_id)
     REFERENCES public.profiles(id,tenant_id),
   CONSTRAINT mios_compliance_action_resolution_consistency CHECK (
-    (status = 'resolved' AND resolved_at IS NOT NULL)
+    (status = 'resolved' AND resolved_at IS NOT NULL AND char_length(btrim(notes)) > 0)
     OR (status <> 'resolved' AND resolved_at IS NULL)
   )
 );
