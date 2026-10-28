@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeReturnPath } from "@/lib/auth/redirects";
+import { isUnassignedPortalHost, portalPublicRewrite, resolvePortalHost } from "@/lib/portals/catalog";
 
 /**
  * Session refresh + route guard.
@@ -13,6 +14,7 @@ import { safeReturnPath } from "@/lib/auth/redirects";
 /** Prefixes reachable without a session. */
 const PUBLIC_PREFIXES = [
   "/pricing",
+  "/portals",
   "/login",
   "/register",
   "/verify",
@@ -29,6 +31,31 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Branded hosts serve public, read-only content only. They do NOT process
+  // Supabase cookies, offer alternate login, or expose private API endpoints.
+  const rootDomain = process.env.LINORA_ROOT_DOMAIN;
+  const hostname = request.nextUrl.hostname;
+  const portalHost = resolvePortalHost(hostname, rootDomain);
+  if (portalHost) {
+    const destination = portalPublicRewrite(hostname, request.nextUrl.pathname, rootDomain);
+    if (!destination || !["GET", "HEAD"].includes(request.method)) {
+      return new NextResponse(null, {
+        status: 404, headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+      });
+    }
+    const target = request.nextUrl.clone();
+    target.pathname = destination;
+    target.search = "";
+    return NextResponse.rewrite(target, {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (isUnassignedPortalHost(hostname, rootDomain)) {
+    return new NextResponse(null, {
+      status: 404, headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+    });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

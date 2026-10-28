@@ -30,7 +30,10 @@ export default async function MarketingLayout({ children }: { children: React.Re
               </span>
             </span>
           </Link>
-          <nav className="flex items-center gap-2" aria-label={t.a11y.mainNavigation}>
+          <nav className="flex flex-wrap items-center gap-2" aria-label={t.a11y.mainNavigation}>
+            <Link href="/portals" className="rounded-lg px-3 py-2 text-sm text-muted hover:bg-panel hover:text-fg">
+              Product suite
+            </Link>
             <Link href="/pricing" className="rounded-lg px-3 py-2 text-sm text-muted hover:bg-panel hover:text-fg">
               {t.marketing.pricingTitle}
             </Link>

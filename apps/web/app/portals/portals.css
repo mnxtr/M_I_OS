@@ -1,0 +1,133 @@
+/* Portal-specific brand language. Kept separate from existing app globals. */
+.linora-portal {
+  --portal-accent: #73f6d2;
+  background:
+    radial-gradient(ellipse 62% 50% at 82% -10%, color-mix(in srgb, var(--portal-accent) 12%, transparent), transparent),
+    #071013;
+  color: #f0f7f6;
+  min-height: 100dvh;
+}
+
+.linora-portal .portal-focus {
+  outline-offset: 4px;
+}
+
+.linora-portal .portal-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.63rem;
+  line-height: 1.7;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--portal-accent);
+  font-weight: 700;
+}
+
+.linora-portal .portal-panel {
+  border: 1px solid #294147;
+  background: linear-gradient(140deg, rgba(22,42,48,.83), rgba(11,22,26,.97));
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 40px #00000024;
+}
+
+.linora-portal .portal-accent {
+  color: var(--portal-accent);
+}
+
+.linora-portal .portal-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  border-radius: .7rem;
+  padding: .75rem 1.2rem;
+  background: var(--portal-accent);
+  color: #071013;
+  font-size: .875rem;
+  font-weight: 750;
+  transition: filter .18s ease, transform .18s ease;
+}
+
+.linora-portal .portal-button:hover { filter: brightness(1.09); transform: translateY(-1px); }
+
+.linora-portal .portal-outline {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  border: 1px solid #365159;
+  border-radius: .7rem;
+  padding: .75rem 1.2rem;
+  color: #e4f4ef;
+  font-size: .875rem;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.linora-portal .portal-outline:hover {
+  border-color: var(--portal-accent);
+  background: #153036;
+}
+
+.linora-portal .portal-radar {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--portal-accent) 26%, #294147);
+  border-radius: 1.6rem;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--portal-accent) 19%, transparent) 0%, transparent 34%),
+    repeating-radial-gradient(circle at 50% 50%, transparent 0px, transparent 73px, #ffffff0b 74px, transparent 75px),
+    linear-gradient(135deg, #14292c, #071013 73%);
+}
+
+.linora-portal .portal-radar::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  z-index: -1;
+  opacity: .25;
+  background-image:
+    linear-gradient(#517e881e 1px, transparent 1px),
+    linear-gradient(90deg, #517e881e 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.linora-portal .portal-curve {
+  border: 1px solid color-mix(in srgb, var(--portal-accent) 40%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 50px color-mix(in srgb, var(--portal-accent) 13%, transparent);
+}
+
+.linora-portal .portal-module-card {
+  border: 1px solid #294147;
+  border-radius: 1.1rem;
+  background: #0d1b20;
+  transition: border-color .2s ease, transform .2s ease;
+}
+
+.linora-portal .portal-module-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--portal-accent) 60%, #294147);
+}
+
+.linora-portal .portal-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 99px;
+  border: 1px solid #365159;
+  padding: .35rem .65rem;
+  font-size: .65rem;
+  font-weight: 650;
+  line-height: 1.5;
+  color: #b6d0d1;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linora-portal *, .linora-portal *::before, .linora-portal *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
