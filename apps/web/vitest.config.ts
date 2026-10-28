@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      // Next handles this package as a build-time marker; Vitest needs a test-only stub.
+      "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
       "@mios/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
     },
   },

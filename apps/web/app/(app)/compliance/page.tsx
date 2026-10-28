@@ -57,7 +57,16 @@ export default async function CompliancePage({ searchParams }: Props) {
       >
         <TabsContent value="assessments">
           <div className="grid gap-5">
-            {templates.length > 0 ? <CreateAssessmentForm templates={templates} /> : null}
+            {templates.length > 0 && process.env.SUPABASE_SECRET_KEY ? (
+              <CreateAssessmentForm templates={templates} />
+            ) : templates.length > 0 ? (
+              <Panel>
+                <ErrorBanner>
+                  New assessment creation is temporarily unavailable. An administrator needs to
+                  finish the secure compliance configuration; existing assessments remain readable.
+                </ErrorBanner>
+              </Panel>
+            ) : null}
             <AssessmentList assessments={assessments} lang={lang} t={t} />
             <Muted>{t.compliance.humanInLoop}</Muted>
           </div>
