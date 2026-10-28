@@ -30,6 +30,17 @@ export function productFromHost(host: string | null | undefined, productDomain =
   return getProduct(subdomain);
 }
 
+/**
+ * During a future wildcard-domain rollout, reserved or unknown Linora hosts
+ * must not silently become alternate authentication or API endpoints.
+ */
+export function isUnassignedBrandHost(host: string | null | undefined, domain = "linora.ai"): boolean {
+  const hostname = normalizedHostname(host);
+  const apex = normalizedHostname(domain);
+  if (!hostname || !apex || hostname === apex) return false;
+  return hostname.endsWith("." + apex) && !productFromHost(host, domain);
+}
+
 export function productHostRoute(
   hostname: string | null | undefined,
   pathname: string,
