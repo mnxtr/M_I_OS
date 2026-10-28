@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getProduct, PRODUCTS, PRODUCT_SECTIONS, PRODUCT_SLUGS } from "@/lib/products/catalog";
 import {
-  canonicalApplicationOrigin, normalizedHostname, productFromHost,
+  canonicalApplicationOrigin, isUnassignedBrandHost, normalizedHostname, productFromHost,
   productHostRoute, workspaceSignInUrl,
 } from "@/lib/products/subdomains";
 
@@ -44,6 +44,16 @@ describe("product vanity hostname boundary", () => {
     "localhost:3000", "mios-manufacturing-pilot.vercel.app", "",
   ])("does not treat %s as a product domain", (host) => {
     expect(productFromHost(host)).toBeUndefined();
+  });
+
+  it("defaults to denying unknown or reserved hosts on the brand apex", () => {
+    for (const host of ["api.linora.ai", "app.linora.ai", "www.linora.ai", "docs.linora.ai", "status.linora.ai", "evil.linora.ai"]) {
+      expect(isUnassignedBrandHost(host)).toBe(true);
+    }
+    expect(isUnassignedBrandHost("compliance.linora.ai")).toBe(false);
+    expect(isUnassignedBrandHost("linora.ai")).toBe(false);
+    expect(isUnassignedBrandHost("mios-manufacturing-pilot.vercel.app")).toBe(false);
+    expect(isUnassignedBrandHost("api.linora.ai.attacker.example")).toBe(false);
   });
 
   it("allows an operator-defined exact apex without accepting other apexes", () => {
