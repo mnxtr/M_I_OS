@@ -43,7 +43,7 @@ describe("executive action metrics", () => {
     { ...base, id: "a4", status: "in_progress", due_date: null, title: "Wage record follow-up" },
   ];
   it("does not count resolved work as overdue or verified compliance", () => {
-    expect(isActionOverdue(rows[2], "2026-10-28")).toBe(false);
+    expect(isActionOverdue(rows[2]!, "2026-10-28")).toBe(false);
     expect(complianceActionMetrics(rows, "2026-10-28")).toEqual({
       total: 4,
       active: 3,
@@ -57,6 +57,6 @@ describe("executive action metrics", () => {
     const result = filterComplianceActions(rows, "attention", "", "2026-10-28");
     expect(result.map((row) => row.id)).toEqual(["a1", "a2"]);
     expect(filterComplianceActions(rows, "all", "wage", "2026-10-28").map((row) => row.id)).toEqual(["a4"]);
-    expect(rows[0].id).toBe("a1");
+    expect(rows[0]!.id).toBe("a1");
   });
 });
