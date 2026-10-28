@@ -45,7 +45,8 @@ describe("compliance page read path", () => {
       code: "social-compliance-core", name: "Core Social Compliance Pack",
       version: 1, description: "Pilot", item_count: 1,
     }]);
-    expect(from).toHaveBeenCalledExactlyOnceWith("checklist_templates");
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(from).toHaveBeenCalledWith("checklist_templates");
     expect(select).toHaveBeenCalledWith("code,name,version,description,items");
     expect(createAdminClient).not.toHaveBeenCalled();
   });
