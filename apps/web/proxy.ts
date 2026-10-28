@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeReturnPath } from "@/lib/auth/redirects";
+import { portalPublicRewrite } from "@/lib/portals/catalog";
 
 /**
  * Session refresh + route guard.
@@ -13,6 +14,7 @@ import { safeReturnPath } from "@/lib/auth/redirects";
 /** Prefixes reachable without a session. */
 const PUBLIC_PREFIXES = [
   "/pricing",
+  "/portals",
   "/login",
   "/register",
   "/verify",
@@ -68,7 +70,12 @@ export async function proxy(request: NextRequest) {
     | undefined;
 
   const { pathname } = request.nextUrl;
-  const publicRoute = isPublic(pathname);
+  // Only explicitly configured, exactly matching known module hosts get brochure
+  // rewrites. No tenant route, API or cookie/session transfer is involved.
+  const portalPath = portalPublicRewrite(
+    request.headers.get("host"), pathname, process.env.LINORA_ROOT_DOMAIN,
+  );
+  const publicRoute = isPublic(pathname) || portalPath !== null;
   const apiRoute = pathname.startsWith("/api/");
 
   // Supabase may have just refreshed (or deleted) a session cookie in setAll().
@@ -85,8 +92,15 @@ export async function proxy(request: NextRequest) {
     return nextResponse;
   }
 
+  function publicPortalResponse(): NextResponse {
+    if (!portalPath) return response;
+    const destination = request.nextUrl.clone();
+    destination.pathname = portalPath;
+    return preserveAuthCookies(NextResponse.rewrite(destination));
+  }
+
   if (!claims?.sub) {
-    if (publicRoute) return response;
+    if (publicRoute) return publicPortalResponse();
     // API consumers expect machine-readable 401s, never login HTML redirects.
     if (apiRoute) {
       return preserveAuthCookies(
@@ -125,7 +139,7 @@ export async function proxy(request: NextRequest) {
     return preserveAuthCookies(NextResponse.redirect(url));
   }
 
-  return response;
+  return portalPath ? publicPortalResponse() : response;
 }
 
 export default proxy;
