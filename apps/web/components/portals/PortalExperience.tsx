@@ -1,26 +1,27 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, CircleDot, Compass, Fingerprint, LockKeyhole, ShieldCheck } from "lucide-react";
 import {
-  PORTAL_SECTIONS, type PortalDefinition, type PortalSection, workspaceUrl,
+  PORTAL_SECTIONS, canonicalAppOrigin, type PortalDefinition, type PortalSection, workspaceUrl,
 } from "@/lib/portals/catalog";
 import { PortalIcon } from "./PortalIcon";
 
 type Portal = PortalDefinition;
 
-function Theme({ portal, children }: { portal: Portal; children: React.ReactNode }) {
+function Theme({ portal, children }: { portal: Portal; children: ReactNode }) {
   return <div style={{ "--portal-accent": portal.accent } as CSSProperties}>{children}</div>;
 }
 
-function PortalNav({ portal, current }: { portal: Portal; current?: PortalSection }) {
+function PortalNav({ portal, current, vanity }: { portal: Portal; current?: PortalSection; vanity: boolean }) {
+  const base = vanity ? "" : `/portals/${portal.slug}`;
   return (
     <nav aria-label={portal.name + " information"} className="flex flex-wrap items-center gap-1.5">
-      <Link href={`/portals/${portal.slug}`} aria-current={!current ? "page" : undefined}
+      <Link href={base || "/"} aria-current={!current ? "page" : undefined}
         className={`rounded-lg px-3 py-2.5 text-sm transition-colors ${!current ? "bg-[#19353a] font-semibold text-white" : "text-[#a2b9bc] hover:bg-[#183036] hover:text-white"}`}>
         Overview
       </Link>
       {PORTAL_SECTIONS.map((section) => (
-        <Link key={section} href={`/portals/${portal.slug}/${section}`} aria-current={current === section ? "page" : undefined}
+        <Link key={section} href={`${base}/${section}`} aria-current={current === section ? "page" : undefined}
           className={`rounded-lg px-3 py-2.5 text-sm capitalize transition-colors ${current === section ? "bg-[#19353a] font-semibold text-white" : "text-[#a2b9bc] hover:bg-[#183036] hover:text-white"}`}>
           {section === "demo" ? "Explore" : section}
         </Link>
@@ -29,11 +30,11 @@ function PortalNav({ portal, current }: { portal: Portal; current?: PortalSectio
   );
 }
 
-function Intro({ portal, current }: { portal: Portal; current?: PortalSection }) {
+function Intro({ portal, current, vanity }: { portal: Portal; current?: PortalSection; vanity: boolean }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#213e44] pb-6">
-      <Link href="/portals" className="inline-flex min-h-11 items-center gap-2 text-sm text-[#a1b6ba] hover:text-white"><ArrowLeft className="size-4"/> Suite directory</Link>
-      <PortalNav portal={portal} current={current} />
+      <a href={canonicalAppOrigin(process.env.NEXT_PUBLIC_SITE_URL) + "/portals"} className="inline-flex min-h-11 items-center gap-2 text-sm text-[#a1b6ba] hover:text-white"><ArrowLeft className="size-4"/> Suite directory</a>
+      <PortalNav portal={portal} current={current} vanity={vanity} />
     </div>
   );
 }
@@ -72,12 +73,12 @@ function PortalArtwork({ portal }: { portal: Portal }) {
   );
 }
 
-export function PortalLanding({ portal }: { portal: Portal }) {
+export function PortalLanding({ portal, vanity = false }: { portal: Portal; vanity?: boolean }) {
   const workspace = workspaceUrl(portal.slug as import("@/lib/portals/catalog").PortalSlug, process.env.NEXT_PUBLIC_SITE_URL);
   return (
     <Theme portal={portal}>
       <div className="mx-auto max-w-7xl px-5 py-7 sm:px-8">
-        <Intro portal={portal}/>
+        <Intro portal={portal} vanity={vanity}/>
         <section className="grid gap-9 py-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,.92fr)] lg:items-center lg:gap-14 lg:py-20">
           <div>
             <p className="portal-eyebrow">{portal.category} · Linora MIOS</p>
@@ -88,7 +89,7 @@ export function PortalLanding({ portal }: { portal: Portal }) {
             <p className="mt-5 text-sm font-medium portal-accent">{portal.signature}</p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a className="portal-button" href={workspace}>Open {portal.name} <ArrowUpRight className="size-4"/></a>
-              <Link className="portal-outline" href={`/portals/${portal.slug}/platform`}>Explore capabilities <ArrowRight className="size-4"/></Link>
+              <Link className="portal-outline" href={vanity ? "/platform" : `/portals/${portal.slug}/platform`}>Explore capabilities <ArrowRight className="size-4"/></Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-[#253e44] pt-6">
               <span className="portal-status">{portal.stage === "existing" ? "Existing MIOS workspace" : portal.stage === "review" ? "Engineering review" : "Planned module"}</span>
@@ -103,7 +104,7 @@ export function PortalLanding({ portal }: { portal: Portal }) {
               <p className="portal-eyebrow">Inside this module</p>
               <h2 id="portal-what" className="mt-2 text-3xl font-semibold tracking-tight">Built around the work.</h2>
             </div>
-            <Link className="inline-flex items-center gap-2 text-sm portal-accent hover:underline" href={`/portals/${portal.slug}/platform`}>Full platform view <ArrowUpRight size={16}/></Link>
+            <Link className="inline-flex items-center gap-2 text-sm portal-accent hover:underline" href={vanity ? "/platform" : `/portals/${portal.slug}/platform`}>Full platform view <ArrowUpRight size={16}/></Link>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {portal.modules.map((module, i) => (
@@ -136,12 +137,12 @@ function SectionHeader({ portal, label, title, description }: {
   );
 }
 
-export function PortalSectionPage({ portal, section }: { portal: Portal; section: PortalSection }) {
+export function PortalSectionPage({ portal, section, vanity = false }: { portal: Portal; section: PortalSection; vanity?: boolean }) {
   const href = workspaceUrl(portal.slug as import("@/lib/portals/catalog").PortalSlug, process.env.NEXT_PUBLIC_SITE_URL);
   return (
     <Theme portal={portal}>
       <div className="mx-auto max-w-7xl px-5 py-7 sm:px-8">
-        <Intro portal={portal} current={section}/>
+        <Intro portal={portal} current={section} vanity={vanity}/>
         {section === "platform" ? (
           <>
             <SectionHeader portal={portal} label="Platform" title="A focused workspace. A connected system." description={portal.description}/>
