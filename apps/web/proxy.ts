@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeReturnPath } from "@/lib/auth/redirects";
-import { portalPublicRewrite } from "@/lib/portals/catalog";
+import { isUnassignedPortalHost, portalPublicRewrite, resolvePortalHost } from "@/lib/portals/catalog";
 
 /**
  * Session refresh + route guard.
@@ -31,6 +31,31 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Branded hosts serve public, read-only content only. They do NOT process
+  // Supabase cookies, offer alternate login, or expose private API endpoints.
+  const rootDomain = process.env.LINORA_ROOT_DOMAIN;
+  const hostname = request.nextUrl.hostname;
+  const portalHost = resolvePortalHost(hostname, rootDomain);
+  if (portalHost) {
+    const destination = portalPublicRewrite(hostname, request.nextUrl.pathname, rootDomain);
+    if (!destination || !["GET", "HEAD"].includes(request.method)) {
+      return new NextResponse(null, {
+        status: 404, headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+      });
+    }
+    const target = request.nextUrl.clone();
+    target.pathname = destination;
+    target.search = "";
+    return NextResponse.rewrite(target, {
+      headers: { "cache-control": "no-store" },
+    });
+  }
+  if (isUnassignedPortalHost(hostname, rootDomain)) {
+    return new NextResponse(null, {
+      status: 404, headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+    });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -70,12 +95,7 @@ export async function proxy(request: NextRequest) {
     | undefined;
 
   const { pathname } = request.nextUrl;
-  // Only explicitly configured, exactly matching known module hosts get brochure
-  // rewrites. No tenant route, API or cookie/session transfer is involved.
-  const portalPath = portalPublicRewrite(
-    request.headers.get("host"), pathname, process.env.LINORA_ROOT_DOMAIN,
-  );
-  const publicRoute = isPublic(pathname) || portalPath !== null;
+  const publicRoute = isPublic(pathname);
   const apiRoute = pathname.startsWith("/api/");
 
   // Supabase may have just refreshed (or deleted) a session cookie in setAll().
@@ -92,15 +112,8 @@ export async function proxy(request: NextRequest) {
     return nextResponse;
   }
 
-  function publicPortalResponse(): NextResponse {
-    if (!portalPath) return response;
-    const destination = request.nextUrl.clone();
-    destination.pathname = portalPath;
-    return preserveAuthCookies(NextResponse.rewrite(destination));
-  }
-
   if (!claims?.sub) {
-    if (publicRoute) return publicPortalResponse();
+    if (publicRoute) return response;
     // API consumers expect machine-readable 401s, never login HTML redirects.
     if (apiRoute) {
       return preserveAuthCookies(
@@ -139,7 +152,7 @@ export async function proxy(request: NextRequest) {
     return preserveAuthCookies(NextResponse.redirect(url));
   }
 
-  return portalPath ? publicPortalResponse() : response;
+  return response;
 }
 
 export default proxy;
