@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeReturnPath } from "@/lib/auth/redirects";
-import { defaultProductDomain, productHostRoute } from "@/lib/products/subdomains";
+import { defaultProductDomain, isUnassignedBrandHost, productHostRoute } from "@/lib/products/subdomains";
 
 /**
  * Session refresh + route guard.
@@ -49,6 +49,15 @@ export async function proxy(request: NextRequest) {
     rewrittenUrl.pathname = productRoute.destination;
     rewrittenUrl.search = "";
     return NextResponse.rewrite(rewrittenUrl);
+  }
+
+  // Reserve every other brand subdomain (app, api, status, docs, unknown)
+  // until a separately reviewed deployment is intentionally configured.
+  if (isUnassignedBrandHost(request.nextUrl.hostname, defaultProductDomain())) {
+    return new NextResponse(null, {
+      status: 404,
+      headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+    });
   }
 
   let response = NextResponse.next({ request });
