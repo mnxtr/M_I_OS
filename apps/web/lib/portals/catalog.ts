@@ -242,7 +242,7 @@ export function isPortalSection(section: string): section is PortalSection {
  */
 export function resolvePortalHost(host: string | null, rootDomain?: string): PortalSlug | null {
   const root = rootDomain?.trim().toLowerCase().replace(/\.$/, "");
-  if (!root || !/^(?:[a-z0-9-]+\.)+[a-z0-9-]+$/.test(root) || root.endsWith(".vercel.app")) return null;
+  if (!root || !/^(?:[a-z0-9-]+\.)+[a-z0-9-]+$/.test(root) || (root === "vercel.app" || root.endsWith(".vercel.app"))) return null;
   const normalizedHost = (host ?? "").toLowerCase().replace(/\.$/, "");
   if (!/^[a-z0-9.-]+(?::[0-9]{1,5})?$/.test(normalizedHost)) return null;
   const hostname = normalizedHost.replace(/:[0-9]{1,5}$/, "");
