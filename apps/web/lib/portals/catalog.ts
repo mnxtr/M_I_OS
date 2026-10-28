@@ -261,3 +261,14 @@ export function portalPublicRewrite(host: string | null, pathname: string, rootD
   if (pathname.startsWith("/") && isPortalSection(section)) return `/portals/${slug}/${section}`;
   return null;
 }
+
+/** All other subdomains on the configured company root are reserved by default.
+ * This prevents accidental shadow login, API and callback endpoints.
+ */
+export function isUnassignedPortalHost(host: string | null, rootDomain?: string): boolean {
+  const root = rootDomain?.trim().toLowerCase().replace(/\.$/, "");
+  if (!root || !/^(?:[a-z0-9-]+\.)+[a-z0-9-]+$/.test(root) || root === "vercel.app" || root.endsWith(".vercel.app")) return false;
+  const normalized = (host ?? "").toLowerCase().replace(/\.$/, "").replace(/:[0-9]{1,5}$/, "");
+  if (!/^[a-z0-9.-]+$/.test(normalized)) return false;
+  return normalized.endsWith("." + root) && !resolvePortalHost(host, root);
+}
