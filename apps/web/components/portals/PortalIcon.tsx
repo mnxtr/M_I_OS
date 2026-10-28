@@ -1,6 +1,6 @@
 import {
   BookOpenText, ChartNoAxesCombined, CircleDollarSign, ClipboardCheck,
-  LayoutDashboard, MessageSquareText, Network, ShieldCheck, ShieldUser, ScanSearch,
+  LayoutDashboard, MessageSquareText, Network, ShieldCheck, UsersRound, ScanSearch,
 } from "lucide-react";
 import type { PortalSlug } from "@/lib/portals/catalog";
 
@@ -12,7 +12,7 @@ const ICONS = {
   analytics: ChartNoAxesCombined,
   quality: ScanSearch,
   integrations: Network,
-  accounts: ShieldUser,
+  accounts: UsersRound,
   billing: CircleDollarSign,
   governance: ShieldCheck,
 } satisfies Record<PortalSlug, typeof LayoutDashboard>;
