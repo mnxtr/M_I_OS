@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeReturnPath } from "@/lib/auth/redirects";
+import { defaultProductDomain, isUnassignedBrandHost, productHostRoute } from "@/lib/products/subdomains";
 
 /**
  * Session refresh + route guard.
@@ -13,6 +14,7 @@ import { safeReturnPath } from "@/lib/auth/redirects";
 /** Prefixes reachable without a session. */
 const PUBLIC_PREFIXES = [
   "/pricing",
+  "/products",
   "/login",
   "/register",
   "/verify",
@@ -29,6 +31,35 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Public vanity sites are informational only. Decide from the exact hostname
+  // before any Supabase session code runs. Never share sessions on product hosts.
+  const productRoute = productHostRoute(
+    request.nextUrl.hostname,
+    request.nextUrl.pathname,
+    defaultProductDomain(),
+  );
+  if (productRoute) {
+    if ((request.method !== "GET" && request.method !== "HEAD") || productRoute.type === "not_found") {
+      return new NextResponse(null, {
+        status: 404,
+        headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+      });
+    }
+    const rewrittenUrl = request.nextUrl.clone();
+    rewrittenUrl.pathname = productRoute.destination;
+    rewrittenUrl.search = "";
+    return NextResponse.rewrite(rewrittenUrl);
+  }
+
+  // Reserve every other brand subdomain (app, api, status, docs, unknown)
+  // until a separately reviewed deployment is intentionally configured.
+  if (isUnassignedBrandHost(request.nextUrl.hostname, defaultProductDomain())) {
+    return new NextResponse(null, {
+      status: 404,
+      headers: { "cache-control": "no-store", "x-robots-tag": "noindex" },
+    });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
