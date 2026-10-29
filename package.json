@@ -12,9 +12,10 @@
     "start": "npm run start --workspace mios-web",
     "lint": "npm run lint --workspace mios-web",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "heroku-postbuild": "npm run build"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22 <25"
   }
 }

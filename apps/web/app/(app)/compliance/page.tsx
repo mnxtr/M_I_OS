@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowUpRight, ClipboardCheck, FileSearch, Activity } from "lucide-react";
 import { requireClaims } from "@/lib/supabase/claims";
 import { listComplianceAssessmentsSupabase, listComplianceTemplatesSupabase } from "@/lib/compliance/supabase";
 import { getServerT, getLang } from "@/lib/i18n";
@@ -37,12 +38,30 @@ export default async function CompliancePage({ searchParams }: Props) {
     : "assessments";
   const gapAssessments = assessments.filter((assessment) => (assessment.counts.gap ?? 0) > 0 || (assessment.counts.partial ?? 0) > 0);
 
+  const totalChecks = assessments.length;
+  const unresolved = assessments.reduce((sum, item) => sum + (item.counts.gap ?? 0) + (item.counts.partial ?? 0), 0);
+  const evidenceReview = assessments.reduce((sum, item) => sum + (item.counts.unknown ?? 0) + (item.counts.pending ?? 0), 0);
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-5">
-        <h1 className="text-xl font-semibold text-fg">{t.compliance.title}</h1>
-        <p className="mt-1 text-sm text-muted">{t.compliance.subtitle}</p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-panel p-6 sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-28 size-80 rounded-full bg-accent/10 blur-3xl" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="mios-eyebrow">LINORA / ASSURANCE INTELLIGENCE</p>
+            <h1 className="mios-display mt-3 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">{t.compliance.title}</h1>
+            <p className="mt-3 text-sm leading-relaxed text-muted">{t.compliance.subtitle}</p>
+            <p className="mt-2 text-xs text-muted">Evidence-led assessments · Human-reviewed outcomes · Not a certification service</p>
+          </div>
+          <Link href="/knowledge" className="inline-flex items-center gap-2 self-start rounded-full border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/20">Evidence library <ArrowUpRight className="size-4" /></Link>
+        </div>
+      </section>
+
+      <section aria-label="Compliance overview" className="grid gap-3 sm:grid-cols-3">
+        <ComplianceMetric icon={<ClipboardCheck className="size-5" />} label="Assessments" value={totalChecks} detail="Tracked review workspaces" />
+        <ComplianceMetric icon={<Activity className="size-5" />} label="Open findings" value={unresolved} detail="Gap or partial evidence" />
+        <ComplianceMetric icon={<FileSearch className="size-5" />} label="Awaiting evidence review" value={evidenceReview} detail="Pending or unknown requirements" />
+      </section>
 
       <ErrorBanner className="mb-4">{error}</ErrorBanner>
 
@@ -139,5 +158,15 @@ function AssessmentList({
         </ul>
       )}
     </Panel>
+  );
+}
+
+function ComplianceMetric({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: number; detail: string }) {
+  return (
+    <div className="group rounded-2xl border border-border bg-panel p-5 transition-colors hover:border-accent/40">
+      <div className="flex items-center justify-between text-muted"><span className="text-xs font-medium uppercase tracking-wider">{label}</span><span className="text-accent" aria-hidden="true">{icon}</span></div>
+      <p className="mt-4 text-3xl font-semibold tabular-nums text-fg">{value.toLocaleString()}</p>
+      <p className="mt-1 text-xs text-muted">{detail}</p>
+    </div>
   );
 }
