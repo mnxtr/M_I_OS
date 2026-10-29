@@ -39,9 +39,17 @@ export default async function CompliancePage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-5">
-        <h1 className="text-xl font-semibold text-fg">{t.compliance.title}</h1>
-        <p className="mt-1 text-sm text-muted">{t.compliance.subtitle}</p>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-fg">{t.compliance.title}</h1>
+          <p className="mt-1 text-sm text-muted">{t.compliance.subtitle}</p>
+        </div>
+        {process.env.FEATURE_COMPLIANCE_ACTIONS === "true" ? (
+          <Link href="/compliance/actions"
+            className="inline-flex items-center rounded-lg border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/20">
+            Open Action Center
+          </Link>
+        ) : null}
       </div>
 
       <ErrorBanner className="mb-4">{error}</ErrorBanner>
