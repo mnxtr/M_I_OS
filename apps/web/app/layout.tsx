@@ -45,7 +45,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={lang} className={`${inter.variable} ${notoBengali.variable}`}>
       <body>
-        <Providers lang={lang}>{children}</Providers>
+        <Providers lang={lang}>
+          {children}
+          <footer
+            aria-label="MIOS legal information"
+            className="border-t border-white/10 bg-[#071013] px-6 py-5 text-center text-sm text-slate-300"
+          >
+            <p>© {new Date().getFullYear()} Manufacturing Intelligence OS. All rights reserved.</p>
+            <p className="mt-1 text-xs tracking-wide text-slate-400">Patent Pending</p>
+          </footer>
+        </Providers>
       </body>
     </html>
   );
