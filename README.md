@@ -1,4 +1,4 @@
-# MIOS — Manufacturing Intelligence OS
+# Linora / MIOS — Manufacturing Intelligence OS
 
 <p align="center">
   <strong>Turn factory data into decisions.</strong>
@@ -12,12 +12,27 @@
   <a href="https://github.com/mnxtr/M_I_OS/stargazers"><img src="https://img.shields.io/github/stars/mnxtr/M_I_OS?style=for-the-badge&logo=github" alt="GitHub stars"></a>
   <a href="https://github.com/mnxtr/M_I_OS/network/members"><img src="https://img.shields.io/github/forks/mnxtr/M_I_OS?style=for-the-badge&logo=github" alt="GitHub forks"></a>
   <a href="https://github.com/mnxtr/M_I_OS/issues"><img src="https://img.shields.io/github/issues/mnxtr/M_I_OS?style=for-the-badge" alt="GitHub issues"></a>
-  <a href="https://github.com/mnxtr/M_I_OS/blob/main/LICENSE"><img src="https://img.shields.io/github/license/mnxtr/M_I_OS?style=for-the-badge" alt="License"></a>
 </p>
 
 > **Ask your factory anything.**
 >
 > MIOS connects documents, spreadsheets, production records, quality data, compliance evidence, and operational databases into one searchable intelligence layer. Instead of hunting through PDFs and Excel files, teams can ask questions in natural language and receive answers grounded in their own factory data.
+
+---
+
+## Project status
+
+Linora is under active development. The repository contains a Next.js web app,
+a FastAPI service, and database-backed ingestion and retrieval components.
+Some capabilities described below are prototypes or planned work; a successful
+build does not establish that authenticated workflows or tenant isolation are ready
+for customer use. Use synthetic data until the release gates are met.
+
+The [release-readiness checklist](docs/09-RELEASE-READINESS.md) records the
+last reviewed deployment baseline and outstanding verification. A Vercel build has
+previously been reported as ready, but its current configuration and authenticated
+flows have not been verified in this setup. Supabase tenant isolation, API
+connectivity, ingestion, payments, and recovery still require end-to-end checks.
 
 ---
 
@@ -39,7 +54,10 @@ Traditional software often forces factories to replace or restructure these syst
 
 ---
 
-## Core capabilities
+## Product capabilities and direction
+
+These are product capabilities and goals; implementation and verification vary
+by feature. Check the roadmap and release-readiness checklist for current gates.
 
 | Capability | What it does |
 |---|---|
@@ -72,6 +90,9 @@ The goal is not another chatbot. The goal is an **operational intelligence syste
 ---
 
 ## Architecture
+
+The diagram describes the intended architecture. The web and API currently have
+separate retrieval paths, and the full flow requires integration verification.
 
 ```mermaid
 flowchart TB
@@ -174,11 +195,11 @@ Tenant isolation is treated as a core architectural requirement rather than a UI
 
 - **Frontend:** Next.js / React / TypeScript
 - **Backend:** Python / FastAPI
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL / Supabase
 - **Vector search:** pgvector
 - **Cache / queue:** Redis
 - **Background processing:** Celery / FastAPI background tasks
-- **Object storage:** S3-compatible storage / MinIO for local development
+- **Object storage:** Supabase Storage and local development storage
 
 ### AI
 
@@ -240,9 +261,10 @@ alongside the FastAPI service. GitHub Pages is used for the public product surfa
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 20+
-- Docker + Docker Compose
+- Node.js 22+ (the workspace engine requirement)
+- PostgreSQL 16 with pgvector, or Docker + Docker Compose for the supplied local stack
 - Git
+- A separate development Supabase environment for authenticated end-to-end flows
 
 Optional for full AI functionality:
 
@@ -259,11 +281,20 @@ cd M_I_OS
 
 ### 2. Start local infrastructure
 
+The supplied Docker Compose configuration starts PostgreSQL with pgvector, Redis,
+and MinIO:
+
 ```bash
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-This provides the local database, vector-search infrastructure, Redis, and object storage required by the development stack.
+Alternatively, run PostgreSQL 16 with pgvector natively and set `DATABASE_URL`
+in `apps/api/.env` to your isolated development database. The database alone
+does not provide Supabase Auth, Storage, or the Supabase APIs. Redis is needed
+when Celery is enabled; the API can use local storage for development.
+
+Use a dedicated development database. Do not bootstrap or seed a shared or
+production database.
 
 ### 3. Start the API
 
@@ -273,16 +304,36 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
+```
+
+Edit `apps/api/.env` for your development database and Supabase project, then
+start the API from `apps/api`:
+
+```bash
 uvicorn app.main:app --reload --port 8000
 ```
+
+The example leaves `DB_BOOTSTRAP=false` and `CREATE_VECTOR_EXTENSION=false`;
+the API health endpoint can start without initializing a database. For a **new,
+isolated development database only**, bootstrap the schema and pgvector on startup
+by setting both flags to `true`; the database role must have the required
+privileges. Turn them off again after initialization. This bootstrap is not a
+production migration procedure.
 
 ### 4. Start the web application
 
 ```bash
-cd apps/web
-npm install
+cd ../..  # from apps/api
+cp apps/web/.env.example apps/web/.env.local
+npm ci
 npm run dev
 ```
+
+After returning to the repository root, populate `apps/web/.env.local` with
+your development Supabase URL and publishable key; configure the API origin and
+site URL to match your environment. Configure a server-only Supabase secret key
+only where features such as signed uploads require it. Never put secret keys in
+`NEXT_PUBLIC_*` variables or commit environment files.
 
 Open:
 
@@ -293,13 +344,19 @@ http://localhost:3000
 ### 5. Configure AI providers
 
 For full-quality generation and embeddings, configure the provider settings in `apps/api/.env`.
+The API imports the OpenAI or Anthropic SDK when the corresponding provider is
+enabled; these SDKs are not included in the base API dependencies and must be
+installed separately for those paths.
 
 ```env
 EMBEDDING_PROVIDER=openai
 LLM_PROVIDER=openai
 ```
 
-MIOS is also designed to support an offline development mode using deterministic local embeddings and extractive responses when external model keys are not configured.
+For API development, `EMBEDDING_PROVIDER=local` and `LLM_PROVIDER=none` use
+deterministic local embeddings and extractive responses. These fallbacks are useful
+for testing plumbing, not for evaluating production answer quality. Web features
+may have separate provider settings; see `apps/web/.env.example`.
 
 ---
 
@@ -414,13 +471,13 @@ For development, ingestion can run inline through FastAPI background tasks.
 For larger deployments, enable Celery workers:
 
 ```bash
-USE_CELERY=true
+cd apps/api
+pip install -e ".[worker]"
 ```
 
-Then run:
+Set `USE_CELERY=true` in the API environment, configure Redis, and then run:
 
 ```bash
-cd apps/api
 celery -A app.worker worker -l info
 ```
 
@@ -478,9 +535,26 @@ Production deployments should additionally implement appropriate encryption, sec
 ### Run tests
 
 ```bash
+# API, from the repository root
 cd apps/api
 .venv/bin/python -m pytest
+
+# Web, from the repository root
+cd ../..
+npm run test
+npm run typecheck
 ```
+
+Database-dependent API tests are skipped unless `MIOS_TEST_DSN` is set. Set
+`DATABASE_URL` and `MIOS_TEST_DSN` before starting the test process and point
+both to the same **dedicated test database**. Never use a production or shared
+database for test fixtures.
+
+In a local run on 1 November 2026, 101 API tests passed and the database-backed
+legacy registration test failed when inserting a user with a null tenant ID.
+Legacy authentication is retained for migration tests; this result does not
+verify or disprove Supabase Auth. The web suite passed 21 tests and type-checking
+passed. These results are a point-in-time baseline, not production acceptance.
 
 ### Lint
 
@@ -514,6 +588,8 @@ Pull request
 ## Roadmap
 
 ### Phase 1 — Intelligence Core
+
+Items below describe implemented foundations, not completed release gates.
 
 - [x] Multi-tenant foundation
 - [x] Document ingestion architecture
