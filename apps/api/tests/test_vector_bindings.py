@@ -12,11 +12,14 @@ class RecordingSession:
         self.calls = []
 
     def execute(self, statement, params):
-        compiled_params = statement.compile().params
-        assert set(params).issubset(compiled_params), (
-            f"Unbound SQL parameters: {set(params) - set(compiled_params)}"
+        compiled_params = set(statement.compile().params)
+        provided_params = set(params)
+        assert provided_params == compiled_params, (
+            "Executed statement bind names differ from provided params. "
+            f"missing={compiled_params - provided_params} "
+            f"unexpected={provided_params - compiled_params}"
         )
-        self.calls.append((statement, params))
+        self.calls.append((statement, params, compiled_params))
         return self
 
     def mappings(self):
@@ -31,6 +34,7 @@ def test_chunk_embedding_update_binds_vector():
     _set_chunk_embedding(session, uuid.uuid4(), [0.25, -0.5])
     assert len(session.calls) == 1
     assert session.calls[0][1]["vec"] == "[0.250000,-0.500000]"
+    assert session.calls[0][2] == {"vec", "dim", "cid"}
 
 
 def test_hybrid_retrieval_binds_vector_and_keyword_params(monkeypatch):
@@ -44,4 +48,6 @@ def test_hybrid_retrieval_binds_vector_and_keyword_params(monkeypatch):
     assert retrieval.hybrid_search(session, "machine downtime", top_k=3) == []
     assert len(session.calls) == 2
     assert "vec" in session.calls[0][1]
+    assert session.calls[0][2] == {"vec", "k"}
+    assert session.calls[1][2] == {"q", "k"}
     assert session.calls[1][1]["q"] == "machine downtime"
