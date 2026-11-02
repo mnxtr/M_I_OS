@@ -53,6 +53,8 @@ Before enabling trustworthy evaluation, provision a **dedicated non-production s
 
 Connected Supabase project: `dkxgpdhzklgojrxwzndu` (shared with other applications). It contains MIOS tenant profiles and document chunks; do not reset or reseed live records. RLS is enabled on the checked MIOS tables, but RLS alone does not certify service-role SQL or two-tenant isolation. Other database-advisor warnings cover the shared project's `public.vector` extension, intended `onboard_factory` SECURITY DEFINER function, unrelated cricket application functions, and leaked-password-protection configuration. Review each before altering shared schema.
 
+Issue #18 verification playbook and the staged hardening/rollback SQL are tracked in `docs/10-SUPABASE-ACCESS-BOUNDARY-REVIEW.md`.
+
 Supabase Advisor references: [Security lints](https://supabase.com/docs/guides/database/database-linter), [RLS and column privileges](https://supabase.com/docs/guides/database/postgres/row-level-security), [Column security](https://supabase.com/docs/guides/database/postgres/column-level-security).
 
 ## Release policy
